@@ -9,7 +9,19 @@ soup = BeautifulSoup(content, 'html.parser')
 #print(soup.prettify())
 
 box = soup.find('ul', class_='list-group')
-print(box)
 
-for tag in soup.findAll(re.compile("^</li>")):
-    print(tag.name)
+if box:
+    # Convert box to string
+    box_string = str(box)
+    
+    # Define your pattern to match <li> tags
+    pattern = r'<li[^>]*>(.*?)<\/li>'
+    
+    # Find all matches using regular expressions
+    matches = re.findall(pattern, box_string, re.DOTALL)
+    
+    # Print the matches
+    for match in matches:
+        print(match)
+else:
+    print("Box not found.")
