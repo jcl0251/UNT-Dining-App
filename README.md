@@ -1,6 +1,6 @@
 # 3444-Project
 
-# MAKE SURE TO SET UP SSH KEY FIRST. MUST BE ABLE TO ACCESS GITHUB THROUGH GIT BASH
+## MAKE SURE TO SET UP SSH KEY FIRST. MUST BE ABLE TO ACCESS GITHUB THROUGH GIT BASH
 
 Set up: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
 
