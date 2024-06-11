@@ -7,9 +7,9 @@ import html
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
     print(f"Fetching URL: {url}")
-    response = requests.get(url)
-    content = response.text
-    soup = BeautifulSoup(content, 'html.parser')
+    response = requests.get(url) # GETS PAGE FROM URL
+    content = response.text # TURNS PAGE INTO TEXT FILE
+    soup = BeautifulSoup(content, 'html.parser') # PARSES TEXT FILE AS HTML 
     return soup
 
 # Function that determines which meal of the day the meals belong to based on the section's html ID 
