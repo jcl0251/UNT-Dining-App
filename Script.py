@@ -7,9 +7,9 @@ import html
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
     print(f"Fetching URL: {url}")
-    response = requests.get(url)
-    content = response.text
-    soup = BeautifulSoup(content, 'html.parser')
+    response = requests.get(url) # Gets page from url
+    content = response.text # Turn into text
+    soup = BeautifulSoup(content, 'html.parser') # Parse as html
     return soup
 
 # Function that determines which meal of the day the meals belong to based on the section's html ID 
@@ -71,7 +71,7 @@ def cleanup_list_group(list_group):
     #data = [{'Dish': html.unescape(match.strip())} for match in matches]
     data = {match[0]: html.unescape(match[1].strip()) for match in matches}
     
-    print(data)
+    #print(data)
     
     return data
 
