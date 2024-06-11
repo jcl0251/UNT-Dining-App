@@ -7,9 +7,9 @@ import html
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
     print(f"Fetching URL: {url}")
-    response = requests.get(url) # GETS PAGE FROM URL
-    content = response.text # TURNS PAGE INTO TEXT FILE
-    soup = BeautifulSoup(content, 'html.parser') # PARSES TEXT FILE AS HTML 
+    response = requests.get(url)
+    content = response.text
+    soup = BeautifulSoup(content, 'html.parser')
     return soup
 
 # Function that determines which meal of the day the meals belong to based on the section's html ID 
@@ -30,7 +30,7 @@ def find_meal_of_day(url):
             list_groups[meal_type] = meal_of_day.find_all('ul', class_='list-group')
         else:
             list_groups[meal_type] = []
-            
+    
     return list_groups
 
 #def scrape_breakfast(url):
@@ -62,18 +62,22 @@ def cleanup_list_group(list_group):
     data_string = str(list_group)
             
     # Define your pattern to match <li> tags
-    pattern = r'<li[^>]*>(.*?)<\/li>'
+    #pattern = r'<li[^>]*>(.*?)<\/li>'
+    pattern = r'<li[^>]*id="(\d+)"[^>]*>(.*?)<\/li>'
     
     # Find all matches using regular expressions
     matches = re.findall(pattern, data_string, re.DOTALL)
     
-    data = [{'Dish': html.unescape(match.strip())} for match in matches]
+    #data = [{'Dish': html.unescape(match.strip())} for match in matches]
+    data = {match[0]: html.unescape(match[1].strip()) for match in matches}
+    
+    print(data)
     
     return data
 
 # Function that utilizes the CSV library to write a file for each respective meal type that contains 
 # Individual meals of that respective (meal type / meal of the day)
-def export_to_CSV(data, meal_type):
+#def export_to_CSV(data, meal_type):
     filename = f'{meal_type}_diningData.csv'
     with open(filename, 'w', newline='') as csvfile:
         fieldnames = [f'{meal_type} Dishes']
@@ -82,19 +86,29 @@ def export_to_CSV(data, meal_type):
             
         for row in data: # For loop that puts each Dish into CSV file
             my_writer.writerow({f'{meal_type} Dishes': row['Dish']})
+            
+def export_to_CSV(data, meal_type):
+    filename = f'{meal_type}_diningData.csv'
+    with open(filename, 'w', newline='') as csvfile:
+        fieldnames = ['ID', f'{meal_type} Dishes']
+        my_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        my_writer.writeheader()
+        
+        for dish_id, dish_name in data.items(): # For loop that puts each Dish into CSV file
+            my_writer.writerow({'ID': dish_id, f'{meal_type} Dishes': dish_name})
     
     
 if __name__ == "__main__":
     website = 'https://diningmenus.unt.edu/?locationID=20'
     list_groups = find_meal_of_day(website)
 
-    all_data = {'Breakfast': [], 'Lunch': [], 'Dinner': []}
+    all_data = {'Breakfast': {}, 'Lunch': {}, 'Dinner': {}}
     
     for meal_type, groups in list_groups.items():
         print(f"Processing {meal_type}")
         for list_group in groups:
             data = cleanup_list_group(list_group)
-            all_data[meal_type].extend(data)
+            all_data[meal_type].update(data)
             
         for meal_type, data in all_data.items():
             export_to_CSV(data, meal_type)
