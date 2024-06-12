@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import requests
 import csv
 import html
+import sqlite3
 
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
@@ -87,7 +88,7 @@ def cleanup_list_group(list_group):
         for row in data: # For loop that puts each Dish into CSV file
             my_writer.writerow({f'{meal_type} Dishes': row['Dish']})
             
-def export_to_CSV(data, meal_type):
+#def export_to_CSV(data, meal_type):
     filename = f'{meal_type}_diningData.csv'
     with open(filename, 'w', newline='') as csvfile:
         fieldnames = ['ID', f'{meal_type} Dishes']
@@ -96,6 +97,49 @@ def export_to_CSV(data, meal_type):
         
         for dish_id, dish_name in data.items(): # For loop that puts each Dish into CSV file
             my_writer.writerow({'ID': dish_id, f'{meal_type} Dishes': dish_name})
+            
+def create_database():
+    connection = sqlite3.connect('dining.db') # Connects to database 
+    c = connection.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS breakfast (
+                id INTEGER PRIMARY KEY,
+                name TEXT
+            )
+        ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS lunch (
+                id INTEGER PRIMARY KEY,
+                name TEXT
+            )
+        ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS dinner (
+                id INTEGER PRIMARY KEY,
+                name TEXT
+            )
+        ''')
+    
+    connection.commit()
+    connection.close()
+    
+def input_data(data, meal_type):
+    connection = sqlite3.connect('dining.db') # Connects to database
+    c = connection.cursor() 
+    table_name = meal_type.lower()
+    for dish_id, dish_name in data.items():
+        try:
+            c.execute(f'''
+                INSERT INTO dishes {table_name} (id, name)
+                VALUES (?, ?)   
+            ''', (dish_id, dish_name))
+        except sqlite3.IntegrityError:
+            print(f"DISH ID {dish_id} already exists in {table_name}. Going on without adding")
+        
+    connection.commit()
+    connection.close()
     
     
 if __name__ == "__main__":
@@ -104,6 +148,8 @@ if __name__ == "__main__":
 
     all_data = {'Breakfast': {}, 'Lunch': {}, 'Dinner': {}}
     
+    create_database()
+    
     for meal_type, groups in list_groups.items():
         print(f"Processing {meal_type}")
         for list_group in groups:
@@ -111,5 +157,6 @@ if __name__ == "__main__":
             all_data[meal_type].update(data)
             
         for meal_type, data in all_data.items():
-            export_to_CSV(data, meal_type)
+            input_data(data, meal_type)
+            #export_to_CSV(data, meal_type)
     #input("\nPress Enter to close...") #Just for testing with executable
