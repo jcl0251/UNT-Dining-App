@@ -105,22 +105,22 @@ def create_database():
         CREATE TABLE IF NOT EXISTS breakfast (
                 id INTEGER PRIMARY KEY,
                 name TEXT
-            )
-        ''')
+        )
+    ''')
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS lunch (
                 id INTEGER PRIMARY KEY,
                 name TEXT
-            )
-        ''')
+        )
+    ''')
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS dinner (
                 id INTEGER PRIMARY KEY,
                 name TEXT
-            )
-        ''')
+        )
+    ''')
     
     connection.commit()
     connection.close()
@@ -131,10 +131,11 @@ def input_data(data, meal_type):
     table_name = meal_type.lower()
     for dish_id, dish_name in data.items():
         try:
-            c.execute(f'''
-                INSERT INTO dishes {table_name} (id, name)
+            sql = f'''
+                INSERT INTO {table_name} (id, name)
                 VALUES (?, ?)   
-            ''', (dish_id, dish_name))
+            '''
+            c.execute(sql, (dish_id, dish_name))
         except sqlite3.IntegrityError:
             print(f"DISH ID {dish_id} already exists in {table_name}. Going on without adding")
         
