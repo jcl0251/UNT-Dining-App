@@ -28,7 +28,14 @@ def find_meal_of_day(url):
     
     for meal_type, meal_of_day in meals_of_day.items():
         if meal_of_day:
-            list_groups[meal_type] = meal_of_day.find_all('ul', class_='list-group')
+            headers_and_groups = []
+            headers = meal_of_day.find_all('p', class_='h5 text-light text-center mb-0')
+            for header in headers:
+                header_text = header.get_text(strip=True)
+                list_group = header.find_next('ul', class_='list-group')
+                if list_group:
+                    headers_and_groups.append((header_text, list_group))
+            list_groups[meal_type] = headers_and_groups
         else:
             list_groups[meal_type] = []
     
@@ -60,19 +67,22 @@ def find_meal_of_day(url):
 
 # Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
-    data_string = str(list_group)
-            
+    header, ul = list_group
+    data_string = str(ul)
+    
     # Define your pattern to match <li> tags
-    #pattern = r'<li[^>]*>(.*?)<\/li>'
     pattern = r'<li[^>]*id="(\d+)"[^>]*>(.*?)<\/li>'
     
     # Find all matches using regular expressions
     matches = re.findall(pattern, data_string, re.DOTALL)
     
-    #data = [{'Dish': html.unescape(match.strip())} for match in matches]
-    data = {match[0]: html.unescape(match[1].strip()) for match in matches}
+    # Create a list of tuples with ID, name, and header
+    data = [(match[0], html.unescape(match[1].strip()), header) for match in matches]
     
-    #print(data)
+    # Print raw data for debugging
+    print(f"Raw data for header '{header}':")
+    for item in data:
+        print(item)
     
     return data
 
@@ -101,24 +111,31 @@ def cleanup_list_group(list_group):
 def create_database():
     connection = sqlite3.connect('dining.db') # Connects to database 
     c = connection.cursor()
+    c.execute('DROP TABLE IF EXISTS breakfast')
+    c.execute('DROP TABLE IF EXISTS lunch')
+    c.execute('DROP TABLE IF EXISTS dinner')
+    
     c.execute('''
         CREATE TABLE IF NOT EXISTS breakfast (
                 id INTEGER PRIMARY KEY,
-                name TEXT
+                name TEXT,
+                header TEXT
         )
     ''')
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS lunch (
                 id INTEGER PRIMARY KEY,
-                name TEXT
+                name TEXT,
+                header TEXT
         )
     ''')
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS dinner (
                 id INTEGER PRIMARY KEY,
-                name TEXT
+                name TEXT,
+                header TEXT
         )
     ''')
     
@@ -129,15 +146,15 @@ def input_data(data, meal_type):
     connection = sqlite3.connect('dining.db') # Connects to database
     c = connection.cursor() 
     table_name = meal_type.lower()
-    for dish_id, dish_name in data.items():
+    for dish in data:
         try:
             sql = f'''
-                INSERT INTO {table_name} (id, name)
-                VALUES (?, ?)   
+                INSERT INTO {table_name} (id, name, header)
+                VALUES (?, ?, ?)   
             '''
-            c.execute(sql, (dish_id, dish_name))
+            c.execute(sql, (dish[0], dish[1], dish[2]))
         except sqlite3.IntegrityError:
-            print(f"DISH ID {dish_id} already exists in {table_name}. Going on without adding")
+            print(f"Dish ID {dish[0]} already exists in {table_name}. Going on without adding")
         
     connection.commit()
     connection.close()
@@ -147,7 +164,7 @@ if __name__ == "__main__":
     website = 'https://diningmenus.unt.edu/?locationID=20'
     list_groups = find_meal_of_day(website)
 
-    all_data = {'Breakfast': {}, 'Lunch': {}, 'Dinner': {}}
+    all_data = {'Breakfast': [], 'Lunch': [], 'Dinner': []}
     
     create_database()
     
@@ -155,7 +172,7 @@ if __name__ == "__main__":
         print(f"Processing {meal_type}")
         for list_group in groups:
             data = cleanup_list_group(list_group)
-            all_data[meal_type].update(data)
+            all_data[meal_type].extend(data)
             
         for meal_type, data in all_data.items():
             input_data(data, meal_type)
