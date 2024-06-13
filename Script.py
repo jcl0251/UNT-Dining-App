@@ -7,7 +7,7 @@ import sqlite3
 
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
-    print(f"Fetching URL: {url}")
+    #print(f"Fetching URL: {url}")
     response = requests.get(url) # Gets page from url
     content = response.text # Turn into text
     soup = BeautifulSoup(content, 'html.parser') # Parse as html
@@ -40,6 +40,37 @@ def find_meal_of_day(url):
             list_groups[meal_type] = []
     
     return list_groups
+
+def find_nutrition(url):
+    soup = scrape(url)
+    
+    
+    table = soup.find('tbody') # Table containing all of the nutritional info
+    labels = table.find_all('div', class_='label')
+    nutrients = [0, 0, 0, 0, 0, 0]
+    
+    for label in labels:
+        label_text = label.get_text(strip=True)
+        # Split the label_text into name and value
+        match_label = re.match(r'([a-zA-Z\s]+)([\d\.]+)(g|mg)?', label_text)
+        if match_label:
+            nutrient_name = match_label.group(1).strip()
+            nutrient_value = float(match_label.group(2))
+            #print(f"Found {nutrient_name}: {nutrient_value}")
+            if nutrient_name == "Calories":
+                nutrients[0] = nutrient_value
+            elif nutrient_name == "Total Fat":
+                nutrients[1] = nutrient_value
+            elif nutrient_name == "Cholesterol":
+                nutrients[2] = nutrient_value
+            elif nutrient_name == "Sodium":
+                nutrients[3] = nutrient_value
+            elif nutrient_name == "Total Carbohydrates":
+                nutrients[4] = nutrient_value
+            elif nutrient_name == "Protein":
+                nutrients[5] = nutrient_value
+        print(nutrients)
+    return nutrients
 
 #def scrape_breakfast(url):
     soup = scrape(url) 
@@ -80,9 +111,9 @@ def cleanup_list_group(list_group):
     data = [(match[0], html.unescape(match[1].strip()), header) for match in matches]
     
     # Print raw data for debugging
-    print(f"Raw data for header '{header}':")
-    for item in data:
-        print(item)
+    #print(f"Raw data for header '{header}':")
+    #for item in data:
+        #print(item)
     
     return data
 
@@ -119,7 +150,13 @@ def create_database():
         CREATE TABLE IF NOT EXISTS breakfast (
                 id INTEGER PRIMARY KEY,
                 name TEXT,
-                header TEXT
+                header TEXT,
+                calories REAL,
+                total_fat REAL,
+                cholesterol REAL,
+                sodium REAL,
+                total_carbohydrates REAL,
+                protein REAL
         )
     ''')
     
@@ -127,7 +164,13 @@ def create_database():
         CREATE TABLE IF NOT EXISTS lunch (
                 id INTEGER PRIMARY KEY,
                 name TEXT,
-                header TEXT
+                header TEXT,
+                calories REAL,
+                total_fat REAL,
+                cholesterol REAL,
+                sodium REAL,
+                total_carbohydrates REAL,
+                protein REAL
         )
     ''')
     
@@ -135,7 +178,13 @@ def create_database():
         CREATE TABLE IF NOT EXISTS dinner (
                 id INTEGER PRIMARY KEY,
                 name TEXT,
-                header TEXT
+                header TEXT,
+                calories REAL,
+                total_fat REAL,
+                cholesterol REAL,
+                sodium REAL,
+                total_carbohydrates REAL,
+                protein REAL
         )
     ''')
     
@@ -148,11 +197,14 @@ def input_data(data, meal_type):
     table_name = meal_type.lower()
     for dish in data:
         try:
+            dish_id = dish[0]
+            dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
+            nutrition = find_nutrition(dish_nutrition_url)
             sql = f'''
-                INSERT INTO {table_name} (id, name, header)
-                VALUES (?, ?, ?)   
+                INSERT INTO {table_name} (id, name, header, calories, total_fat, cholesterol, sodium, total_carbohydrates, protein)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)   
             '''
-            c.execute(sql, (dish[0], dish[1], dish[2]))
+            c.execute(sql, (dish[0], dish[1], dish[2], *nutrition))
         except sqlite3.IntegrityError:
             print(f"Dish ID {dish[0]} already exists in {table_name}. Going on without adding")
         
@@ -161,8 +213,10 @@ def input_data(data, meal_type):
     
     
 if __name__ == "__main__":
-    website = 'https://diningmenus.unt.edu/?locationID=20'
-    list_groups = find_meal_of_day(website)
+    url1 = 'https://diningmenus.unt.edu/?locationID=20'
+    
+    list_groups = find_meal_of_day(url1)
+    
 
     all_data = {'Breakfast': [], 'Lunch': [], 'Dinner': []}
     
@@ -173,8 +227,6 @@ if __name__ == "__main__":
         for list_group in groups:
             data = cleanup_list_group(list_group)
             all_data[meal_type].extend(data)
-            
-        for meal_type, data in all_data.items():
             input_data(data, meal_type)
             #export_to_CSV(data, meal_type)
     #input("\nPress Enter to close...") #Just for testing with executable
