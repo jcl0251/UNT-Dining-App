@@ -4,6 +4,10 @@ import requests
 import csv
 import html
 import sqlite3
+import os
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
@@ -69,7 +73,7 @@ def find_nutrition(url):
                 nutrients[4] = nutrient_value
             elif nutrient_name == "Protein":
                 nutrients[5] = nutrient_value
-        print(nutrients)
+        #print(nutrients)
     return nutrients
 
 #def scrape_breakfast(url):
@@ -139,7 +143,7 @@ def cleanup_list_group(list_group):
         for dish_id, dish_name in data.items(): # For loop that puts each Dish into CSV file
             my_writer.writerow({'ID': dish_id, f'{meal_type} Dishes': dish_name})
             
-def create_database():
+#def create_database():
     connection = sqlite3.connect('dining.db') # Connects to database 
     c = connection.cursor()
     c.execute('DROP TABLE IF EXISTS breakfast')
@@ -191,7 +195,7 @@ def create_database():
     connection.commit()
     connection.close()
     
-def input_data(data, meal_type):
+#def input_data(data, meal_type):
     connection = sqlite3.connect('dining.db') # Connects to database
     c = connection.cursor() 
     table_name = meal_type.lower()
@@ -211,6 +215,32 @@ def input_data(data, meal_type):
     connection.commit()
     connection.close()
     
+def link_firebase():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(current_directory, 'project-c2f87-firebase-adminsdk-v6ze4-1e8ee0fe73.json')
+    cred = credentials.Certificate(path)
+    firebase_admin.initialize_app(cred) 
+    database = firestore.client()
+    return database
+
+def input_to_firestore(database, data, meal_type):
+    collection_reference = database.collection(meal_type.lower())
+    for dish in data:
+        dish_id = dish[0]
+        dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
+        nutrition = find_nutrition(dish_nutrition_url)
+        
+        document_reference = collection_reference.document(dish_id)
+        document_reference.set({
+            'name': dish[1],
+            'header': dish[2],
+            'calories': nutrition[0],
+            'total_fat': nutrition[1],
+            'cholesterol': nutrition[2],
+            'sodium': nutrition[3],
+            'total_carbohydrates': nutrition[4],
+            'protein': nutrition[5]
+        })
     
 if __name__ == "__main__":
     url1 = 'https://diningmenus.unt.edu/?locationID=20'
@@ -220,13 +250,16 @@ if __name__ == "__main__":
 
     all_data = {'Breakfast': [], 'Lunch': [], 'Dinner': []}
     
-    create_database()
+    #create_database()
+    
+    database = link_firebase()
     
     for meal_type, groups in list_groups.items():
         print(f"Processing {meal_type}")
         for list_group in groups:
             data = cleanup_list_group(list_group)
             all_data[meal_type].extend(data)
-            input_data(data, meal_type)
+            input_to_firestore(database, data, meal_type)
+            #input_data(data, meal_type)
             #export_to_CSV(data, meal_type)
     #input("\nPress Enter to close...") #Just for testing with executable
