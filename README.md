@@ -17,5 +17,14 @@ So in our case:
     pyinstaller --onefile Script.py
 
 
+Nutritional information to hardcode later:
+
+Calories) No units
+Fats) Grams
+Cholesterol) Milligrams
+Sodium) Milligrams
+Carbs) Grams
+Protein) Grams
+
 
 
