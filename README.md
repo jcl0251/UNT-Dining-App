@@ -20,10 +20,15 @@ So in our case:
 Nutritional information to hardcode later:
 
 Calories) No units
+
 Fats) Grams
+
 Cholesterol) Milligrams
+
 Sodium) Milligrams
+
 Carbs) Grams
+
 Protein) Grams
 
 

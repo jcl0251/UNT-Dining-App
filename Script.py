@@ -217,7 +217,7 @@ def cleanup_list_group(list_group):
     
 def link_firebase():
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(current_directory, 'project-c2f87-firebase-adminsdk-v6ze4-1e8ee0fe73.json')
+    path = os.path.join(current_directory, 'project-c2f87-firebase-adminsdk-v6ze4-5ec08aa368.json')
     cred = credentials.Certificate(path)
     firebase_admin.initialize_app(cred) 
     database = firestore.client()
