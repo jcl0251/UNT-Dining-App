@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { db } from "../firebaseConfig";
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Collapsible } from '@/components/Collapsible';
@@ -19,7 +20,7 @@ import { ThemedView } from '@/components/ThemedView';
 headerBackgroundColor={{ light: '#38CB82', dark: '#198450' }}
 headerImage={<Image source={require('@/assets/images/unt-banner.png')} style={styles.headerImage}>
 */
-export default function PlanScreen() {
+const PlanScreen = () => {
 
   const navigation = useNavigation();
   
@@ -137,3 +138,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default PlanScreen
