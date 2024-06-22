@@ -76,30 +76,6 @@ def find_nutrition(url):
         #print(nutrients)
     return nutrients
 
-#def scrape_breakfast(url):
-    soup = scrape(url) 
-    box = soup.find('ul', class_='list-group')
-    return box
-
-# JUST FOR TESTING
-#def print_breakfast_list(data):
-    if data:
-        # Convert data to string
-        data_string = str(data)
-        
-        # Define your pattern to match <li> tags
-        pattern = r'<li[^>]*>(.*?)<\/li>'
-        
-        # Find all matches using regular expressions
-        matches = re.findall(pattern, data_string, re.DOTALL)
-        
-        # Print the matches
-        for match in matches:
-            stripped_match = match.strip()
-            print(stripped_match)
-    else:
-        print("Data not found.")
-
 # Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
     header, ul = list_group
@@ -120,100 +96,6 @@ def cleanup_list_group(list_group):
         #print(item)
     
     return data
-
-# Function that utilizes the CSV library to write a file for each respective meal type that contains 
-# Individual meals of that respective (meal type / meal of the day)
-#def export_to_CSV(data, meal_type):
-    filename = f'{meal_type}_diningData.csv'
-    with open(filename, 'w', newline='') as csvfile:
-        fieldnames = [f'{meal_type} Dishes']
-        my_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        my_writer.writeheader()
-            
-        for row in data: # For loop that puts each Dish into CSV file
-            my_writer.writerow({f'{meal_type} Dishes': row['Dish']})
-            
-#def export_to_CSV(data, meal_type):
-    filename = f'{meal_type}_diningData.csv'
-    with open(filename, 'w', newline='') as csvfile:
-        fieldnames = ['ID', f'{meal_type} Dishes']
-        my_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        my_writer.writeheader()
-        
-        for dish_id, dish_name in data.items(): # For loop that puts each Dish into CSV file
-            my_writer.writerow({'ID': dish_id, f'{meal_type} Dishes': dish_name})
-            
-#def create_database():
-    connection = sqlite3.connect('dining.db') # Connects to database 
-    c = connection.cursor()
-    c.execute('DROP TABLE IF EXISTS breakfast')
-    c.execute('DROP TABLE IF EXISTS lunch')
-    c.execute('DROP TABLE IF EXISTS dinner')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS breakfast (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                header TEXT,
-                calories REAL,
-                total_fat REAL,
-                cholesterol REAL,
-                sodium REAL,
-                total_carbohydrates REAL,
-                protein REAL
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS lunch (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                header TEXT,
-                calories REAL,
-                total_fat REAL,
-                cholesterol REAL,
-                sodium REAL,
-                total_carbohydrates REAL,
-                protein REAL
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS dinner (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                header TEXT,
-                calories REAL,
-                total_fat REAL,
-                cholesterol REAL,
-                sodium REAL,
-                total_carbohydrates REAL,
-                protein REAL
-        )
-    ''')
-    
-    connection.commit()
-    connection.close()
-    
-#def input_data(data, meal_type):
-    connection = sqlite3.connect('dining.db') # Connects to database
-    c = connection.cursor() 
-    table_name = meal_type.lower()
-    for dish in data:
-        try:
-            dish_id = dish[0]
-            dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
-            nutrition = find_nutrition(dish_nutrition_url)
-            sql = f'''
-                INSERT INTO {table_name} (id, name, header, calories, total_fat, cholesterol, sodium, total_carbohydrates, protein)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)   
-            '''
-            c.execute(sql, (dish[0], dish[1], dish[2], *nutrition))
-        except sqlite3.IntegrityError:
-            print(f"Dish ID {dish[0]} already exists in {table_name}. Going on without adding")
-        
-    connection.commit()
-    connection.close()
     
 def link_firebase():
     current_directory = os.path.dirname(os.path.abspath(__file__))
