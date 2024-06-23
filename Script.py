@@ -105,6 +105,12 @@ def link_firebase():
     database = firestore.client()
     return database
 
+def clear_firestore_collection(database, collection):
+    collection_reference = database.collection(collection)
+    docs = collection_reference.stream() # From fir
+    for doc in docs:
+        doc.reference.delete()
+
 def input_to_firestore(database, data, meal_type):
     collection_reference = database.collection(meal_type.lower())
     for dish in data:
@@ -112,7 +118,7 @@ def input_to_firestore(database, data, meal_type):
         dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
         nutrition = find_nutrition(dish_nutrition_url)
         
-        document_reference = collection_reference.document(dish_id)
+        document_reference = collection_reference.document(dish_id) #Creates documents (entries) in the collection (mealtype). AKA puts meals in meals of day
         document_reference.set({
             'name': dish[1],
             'header': dish[2],
@@ -123,6 +129,20 @@ def input_to_firestore(database, data, meal_type):
             'total_carbohydrates': nutrition[4],
             'protein': nutrition[5]
         })
+        
+        library_collection_reference = database.collection('library')
+        library_document_reference = library_collection_reference.document(dish_id) #Here we are just storying every ID into a library that wont be overwritten so we can essentially use a search bar
+        library_document_reference.set({
+            'name': dish[1],
+            'header': dish[2],
+            'calories': nutrition[0],
+            'total_fat': nutrition[1],
+            'cholesterol': nutrition[2],
+            'sodium': nutrition[3],
+            'total_carbohydrates': nutrition[4],
+            'protein': nutrition[5]
+        })
+        
     
 if __name__ == "__main__":
     url1 = 'https://diningmenus.unt.edu/?locationID=20'
@@ -135,6 +155,10 @@ if __name__ == "__main__":
     #create_database()
     
     database = link_firebase()
+    
+    clear_firestore_collection(database, 'breakfast')
+    clear_firestore_collection(database, 'lunch')
+    clear_firestore_collection(database, 'dinner')
     
     for meal_type, groups in list_groups.items():
         print(f"Processing {meal_type}")
