@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { Link } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
