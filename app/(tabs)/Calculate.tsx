@@ -11,6 +11,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 
 type FoodItem = {
   id: string;
@@ -23,8 +25,6 @@ type FoodItem = {
   protein: number
 }
 
-
-
 const CalculateScreen: React.FC = () => {
   const navigation = useNavigation();
   const [data, setData] = useState<FoodItem[]>([]);
@@ -33,12 +33,15 @@ const CalculateScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
   //declaration of dark mode variables
   const colorScheme = useColorScheme();  //calls the usecolorscheme library
   const isDarkMode = colorScheme === 'dark';  //bool like variable to check if the phone is in dark mode or not
 
-  useEffect(() => {
+  
+
+  useEffect(() => { // FETCHING THE DATA FROM THE DATABASE
     const fetchData = async () => {
       try {
         const colRef = collection(db, 'breakfast'); // Change to 'lunch' or 'dinner' as needed
@@ -62,6 +65,8 @@ const CalculateScreen: React.FC = () => {
 
     fetchData();
   }, []);
+
+  
 
   const homeButtonPress = () => {
     //navigation.navigate('Calculate'); // Navigating to the 'Calculate' tab
@@ -97,6 +102,7 @@ const CalculateScreen: React.FC = () => {
     setModalOpen(true);
   };
 
+
   //before main check if user is in dark mode if yes change dynamicStyles to dark mode if no change to light mode
   const dynamicStyles = isDarkMode ? darkStyles : lightStyles;
 
@@ -117,7 +123,7 @@ const CalculateScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/*TOP HEADING*/}
-      <ThemedText style={[styles.title, dynamicStyles.text]}>Calculate</ThemedText>
+      <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
 
       
       
@@ -167,18 +173,45 @@ const CalculateScreen: React.FC = () => {
                 name='close'
                 size={24}
                 style={styles.modalToggle}
-                onPress = {() => setModalOpen(false)}
+                onPress={() => setModalOpen(false)}
               />
               {selectedFood && (
-                <>
-                  <Text style={styles.foodName}>{selectedFood.name}</Text>
-                  <Text>Calories: {selectedFood.calories}</Text>
-                  <Text>Total Fat: {selectedFood.total_fat}g</Text>
-                  <Text>Cholesterol: {selectedFood.cholesterol}mg</Text>
-                  <Text>Sodium: {selectedFood.sodium}mg</Text>
-                  <Text>Total Carbohydrates: {selectedFood.total_carbohydrates}g</Text>
-                  <Text>Protein: {selectedFood.protein}g</Text>
-                </>
+                <View style={styles.nutritionLabelContainer}>
+                  <Text style={styles.labelText}>Nutrition Facts</Text>
+                  <View style={styles.horizontalLine} />
+                  <Text style={styles.itemName}>{selectedFood.name}</Text>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Calories</Text>
+                    <Text style={styles.valueText}>{selectedFood.calories}</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Total Fat</Text>
+                    <Text style={styles.valueText}>{selectedFood.total_fat}g</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Cholesterol</Text>
+                    <Text style={styles.valueText}>{selectedFood.cholesterol}mg</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Sodium</Text>
+                    <Text style={styles.valueText}>{selectedFood.sodium}mg</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Total Carbohydrates</Text>
+                    <Text style={styles.valueText}>{selectedFood.total_carbohydrates}g</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                  <View style={styles.row}>
+                    <Text style={styles.labelText}>Protein</Text>
+                    <Text style={styles.valueText}>{selectedFood.protein}g</Text>
+                  </View>
+                  <View style={styles.horizontalLine} />
+                </View>
               )}
             </View>
           </View>
@@ -314,37 +347,67 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
   },
-  modalContainer: {
+  modalContainer: { // Modal's container/background 
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalToggle: {
-    marginBottom: 50,
+  modalToggle: { // Modal's exit button
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#f2f2f2',
+    borderColor: 'transparent',
     padding: 30,
     borderRadius: 10,
     alignSelf: 'auto',
   },
-  modalClose: {
-    marginTop: 20,
-    marginBottom: 0,
-    alignSelf: 'flex-end',
+  modalContent: { // Modal's main info
+    flex: 1,
+    width: '90%',
   },
-  modalContent: {
+  safeArea: {
     flex: 1,
   },
-  foodName: {
+  nutritionLabelContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  labelText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  itemName: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
   },
-  safeArea: {
-    flex: 1,
-  }
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginVertical: 5,
+  },
+  valueText: {
+    fontSize: 18,
+    fontFamily: 'Arial',
+  },
+  horizontalLine: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
 });
+
+
+
+
+
+
+
 
 //light mode style sheet
 const lightStyles = StyleSheet.create({
