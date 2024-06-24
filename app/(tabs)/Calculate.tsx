@@ -1,5 +1,5 @@
 import React, {useEffect, useState } from 'react';
-import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView, Pressable, useColorScheme } from 'react-native';
+import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView, Pressable, Modal, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/firestore"
@@ -9,12 +9,21 @@ import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
+import { MaterialIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 
 type FoodItem = {
   id: string;
   name: string;
   calories: number;
+  total_fat: number;
+  cholesterol: number;
+  sodium: number;
+  total_carbohydrates: number;
+  protein: number
 }
 
 const CalculateScreen: React.FC = () => {
@@ -23,17 +32,18 @@ const CalculateScreen: React.FC = () => {
   const [servings, setServings] = useState<{ [id: string]: number }>({});
   const [totalCalories, setTotalCalories] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('breakfast'); // Default to 'breakfast'
-
-  
 
   //declaration of dark mode variables
   const colorScheme = useColorScheme();  //calls the usecolorscheme library
   const isDarkMode = colorScheme === 'dark';  //bool like variable to check if the phone is in dark mode or not
 
+  
 
-
-  useEffect(() => {
+  useEffect(() => { // FETCHING THE DATA FROM THE DATABASE
     const fetchData = async () => {
       try {
         const colRef = collection(db, activeTab); // Change to 'lunch' or 'dinner' as needed
@@ -42,16 +52,23 @@ const CalculateScreen: React.FC = () => {
           id: doc.id,
           name: doc.data().name,
           calories: doc.data().calories,
+          total_fat: doc.data().total_fat,
+          cholesterol: doc.data().cholesterol,
+          sodium: doc.data().sodium,
+          total_carbohydrates: doc.data().total_carbohydrates,
+          protein: doc.data().protein,
+
         }));
         setData(docs);
       } catch (err: any) {
         setError(err.message);
       }
     };
+
     fetchData();
   }, [activeTab]);
 
-   const pressedButton = () => {
+  const pressedButton = () => {
   
     navigation.navigate('index');
   
@@ -88,13 +105,19 @@ const CalculateScreen: React.FC = () => {
     });
   };
 
-  const calculateTotalCalories = (newServings: { [id: string]: number }) => {
+  const calculateTotalCalories = (newServings: { [id: string]: number }) => { // Key-value pair of food ID and its number of servings
     let total = 0;
     data.forEach(item => {
       total += (newServings[item.id] || 0) * (item.calories || 0);
     });
     setTotalCalories(total);
   };
+
+  const handleFoodPress = (food: FoodItem) => {
+    setSelectedFood(food);
+    setModalOpen(true);
+  };
+
 
   //before main check if user is in dark mode if yes change dynamicStyles to dark mode if no change to light mode
   const dynamicStyles = isDarkMode ? darkStyles : lightStyles;
@@ -114,73 +137,129 @@ const CalculateScreen: React.FC = () => {
   //MAIN
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
 
-      <Pressable style={styles.backButton} onPress={homeButtonPress}>
-      <Image
-          source={require('@/assets/images/back-button.png')}
-          style={styles.backButtonIcon}
-        />
-      </Pressable>
-
-    
-
-      {/*TOP HEADING*/}
-      <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
-
-
-      {/*TABS*/}
-      <View style={styles.tabContainer}>
-        <Pressable style={tabButtonStyle('breakfast')} onPress={() => setActiveTab('breakfast')}>
-          <Text style={tabTextStyle('breakfast')}>Breakfast</Text>
+        <Pressable style={styles.backButton} onPress={homeButtonPress}>
+          <Image
+            source={require('@/assets/images/back-button.png')}
+            style={styles.backButtonIcon}
+          />
         </Pressable>
-        <Pressable style={tabButtonStyle('lunch')} onPress={() => setActiveTab('lunch')}>
-          <Text style={tabTextStyle('lunch')}>Lunch</Text>
-        </Pressable>
-        <Pressable style={tabButtonStyle('dinner')} onPress={() => setActiveTab('dinner')}>
-          <Text style={tabTextStyle('dinner')}>Dinner</Text>
-        </Pressable>
-      </View>
 
+        {/*TOP HEADING*/}
+        <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
 
-      <ScrollView style={styles.scrollBox}>
-        {error ? (
-          <Text style={styles.errorText}>Error: {error}</Text>
-        ) : (
-          data.map(item => (
-            <View key={item.id} style={styles.itemContainer}>
-            <Text style={[styles.itemText, dynamicStyles.text]}>{item.name}</Text>
-            <View style={styles.buttonContainer}>
-              <Pressable onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
-                <Text style={styles.buttonText}>-</Text>
-              </Pressable>
+        {/*TABS*/}
+        <View style={styles.tabContainer}>
+          <Pressable style={tabButtonStyle('breakfast')} onPress={() => setActiveTab('breakfast')}>
+            <Text style={tabTextStyle('breakfast')}>Breakfast</Text>
+          </Pressable>
+          <Pressable style={tabButtonStyle('lunch')} onPress={() => setActiveTab('lunch')}>
+            <Text style={tabTextStyle('lunch')}>Lunch</Text>
+          </Pressable>
+          <Pressable style={tabButtonStyle('dinner')} onPress={() => setActiveTab('dinner')}>
+            <Text style={tabTextStyle('dinner')}>Dinner</Text>
+          </Pressable>
+        </View>
+        
+        
 
-              <Text style={[styles.servingText, dynamicStyles.text]}>{servings[item.id] || 0}</Text>
+        <ScrollView style={styles.scrollBox}>
+          {error ? (
+            <Text style={styles.errorText}>Error: {error}</Text>
+          ) : (
+            data.map(item => (
+              <View key={item.id} style={styles.itemContainer}>
+                <Pressable onPress={() => handleFoodPress(item)}>
+                  <Text style={styles.itemText}>{item.name}</Text>
+                </Pressable>
 
-              <Pressable onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
-                <Text style={styles.buttonText}>+</Text>
-              </Pressable>
-            </View>
-          </View>
-          ))
-        )}
-      </ScrollView>
-      
-      <TouchableOpacity 
-        style={styles.resetButton} //changes the style of the button to the button style at the bottom
-        onPress={resetButtonPress} //takes you to calculate tab when pressed
+                <View style={styles.buttonContainer}>
+                  <Pressable onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
+                    <Text style={styles.buttonText}>-</Text>
+                  </Pressable>
+
+                  <Text style={[styles.servingText, dynamicStyles.text]}>{servings[item.id] || 0}</Text>
+                  <Pressable onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
+                    <Text style={styles.buttonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+
+        
+        <Pressable 
+          style={styles.resetButton} //changes the style of the button to the button style at the bottom
+          onPress={resetButtonPress} //takes you to calculate tab when pressed
         > 
-          <Text style={styles.resetText}>Reset</Text>
+            <Text style={styles.resetText}>Reset</Text>
+        </Pressable>
 
-        </TouchableOpacity>
+        <Modal visible={modalOpen} animationType='slide'>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Pressable onPress={() => setModalOpen(false)} style={styles.modalToggle}>
+                  <MaterialIcons
+                  name='close'
+                  size={30}
+                  />
+                </Pressable>
+                {selectedFood && (
+                  <View style={styles.nutritionLabelContainer}>
+                    <Text style={styles.labelText}>Nutrition Facts</Text>
+                    <View style={styles.horizontalLine} />
+                    <Text style={styles.itemName}>{selectedFood.name}</Text>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Calories</Text>
+                      <Text style={styles.valueText}>{selectedFood.calories}</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Total Fat</Text>
+                      <Text style={styles.valueText}>{selectedFood.total_fat}g</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Cholesterol</Text>
+                      <Text style={styles.valueText}>{selectedFood.cholesterol}mg</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Sodium</Text>
+                      <Text style={styles.valueText}>{selectedFood.sodium}mg</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Total Carbohydrates</Text>
+                      <Text style={styles.valueText}>{selectedFood.total_carbohydrates}g</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText}>Protein</Text>
+                      <Text style={styles.valueText}>{selectedFood.protein}g</Text>
+                    </View>
+                    <View style={styles.horizontalLine} />
+                  </View>
+                )}
+              </View>
+            </View>
+          </SafeAreaView>
+        </Modal>
+        
+        
 
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalText}>Total Calories: {totalCalories}</Text>
+        </View>
 
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalText}>Total Calories: {totalCalories}</Text>
+        
       </View>
-
-      
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -188,7 +267,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 1,
-    marginTop: 40,
   },
   mainContent: {
     padding: 50,
@@ -203,7 +281,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     top: '-8%',
     left: '25%',
-    
   },
   scrollBox: {
     flex: 1,
@@ -243,7 +320,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    
     alignItems: 'center',
   },
   incrementButton: {
@@ -335,8 +411,15 @@ const styles = StyleSheet.create({
     height: 50,
     width: 120,
   },
+  button3: {
+    backgroundColor: '#808080',
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
   buttonText3: {
-    fontSize: 70,
+    fontSize: 30,
     color: 'white',
     fontWeight: 'bold',
   },
@@ -382,7 +465,66 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  modalContainer: { // Modal's container/background 
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalToggle: { // Modal's exit button
+    backgroundColor: 'transparent',
+    padding: 10,
+    borderRadius: 5,
+    alignSelf: 'auto',
+    marginTop: 30
+  },
+  modalContent: { // Modal's main info
+    flex: 1,
+    width: '90%',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  nutritionLabelContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  labelText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  itemName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginVertical: 5,
+  },
+  valueText: {
+    fontSize: 18,
+    fontFamily: 'Arial',
+  },
+  horizontalLine: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
 });
+
+
+
+
+
+
+
 
 //light mode style sheet
 const lightStyles = StyleSheet.create({
