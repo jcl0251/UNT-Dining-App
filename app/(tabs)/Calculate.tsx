@@ -14,8 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useContext } from 'react';
-import { ThemeContext } from '@/store/context';
 
 type FoodItem = {
   id: string;
@@ -30,8 +28,6 @@ type FoodItem = {
 
 const CalculateScreen: React.FC = () => {
   const navigation = useNavigation();
-  const styles=useStyles();
-  const{mainTheme,darkMode,setDarkMode}=useContext(ThemeContext);
   const [data, setData] = useState<FoodItem[]>([]);
   const [servings, setServings] = useState<{ [id: string]: number }>({});
   const [totalCalories, setTotalCalories] = useState(0);
@@ -124,6 +120,7 @@ const CalculateScreen: React.FC = () => {
 
 
   //before main check if user is in dark mode if yes change dynamicStyles to dark mode if no change to light mode
+  const dynamicStyles = isDarkMode ? darkStyles : lightStyles;
 
   const resetButtonPress = () => {
     
@@ -151,7 +148,7 @@ const CalculateScreen: React.FC = () => {
         </Pressable>
 
         {/*TOP HEADING*/}
-        <Text style={styles.title}>Calculate</Text>
+        <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
 
         {/*TABS*/}
         <View style={styles.tabContainer}>
@@ -183,7 +180,7 @@ const CalculateScreen: React.FC = () => {
                     <Text style={styles.buttonText}>-</Text>
                   </Pressable>
 
-                  <Text style={[styles.servingText, styles.itemText]}>{servings[item.id] || 0}</Text>
+                  <Text style={[styles.servingText, dynamicStyles.text]}>{servings[item.id] || 0}</Text>
                   <Pressable onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
                     <Text style={styles.buttonText}>+</Text>
                   </Pressable>
@@ -266,22 +263,19 @@ const CalculateScreen: React.FC = () => {
   );
 };
 
-function useStyles(){
-  const{mainTheme}=useContext(ThemeContext);
-  return StyleSheet.create({  
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 1,
-    backgroundColor:mainTheme.colors.background,
   },
   mainContent: {
     padding: 50,
-    backgroundColor: mainTheme.colors.background,
+    //backgroundColor: 'lightgreen',
     //marginBottom: 20,
   },
   title: {
     fontSize: 50,
-    color: mainTheme.colors.foreground,
+    color: 'white',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 0,
@@ -294,21 +288,21 @@ function useStyles(){
   itemContainer: {
     padding: 1,
     marginBottom: 10,
-    backgroundColor: 'grey',
+    //backgroundColor: '#f0f0f0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   itemText: {
     fontSize: 18,
-    color: mainTheme.colors.foreground,
+    color: 'white',
     flex: 1,
     flexWrap: 'wrap',
     marginRight: 10,
   },
   resetText: {
     fontSize: 16,
-    color: mainTheme.colors.foreground,
+    color: 'white',
     alignSelf: 'center',
     justifyContent: 'center',
     marginBottom: 0,
@@ -350,7 +344,7 @@ function useStyles(){
   },
   buttonText: {
     fontSize: 20,
-    color: mainTheme.colors.foreground,
+    color: 'white',
   },
   servingText: {
     fontSize: 18,
@@ -370,7 +364,7 @@ function useStyles(){
     fontWeight: 'bold',
   },
   backButton: {
-    backgroundColor: 'grey',
+    //backgroundColor: '#808080',
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -426,12 +420,12 @@ function useStyles(){
   },
   buttonText3: {
     fontSize: 30,
-    color: 'red',
+    color: 'white',
     fontWeight: 'bold',
   },
   buttonText4: {
     fontSize: 20,
-    color: 'blue',
+    color: 'white',
     fontWeight: 'bold',
   },
   backButtonIcon: {
@@ -492,7 +486,7 @@ function useStyles(){
     flex: 1,
   },
   nutritionLabelContainer: {
-    backgroundColor: 'black',
+    backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
@@ -523,7 +517,7 @@ function useStyles(){
     marginVertical: 5,
     width: '100%',
   },
-});}
+});
 
 
 
@@ -531,11 +525,11 @@ function useStyles(){
 
 
 
-/*
+
 //light mode style sheet
 const lightStyles = StyleSheet.create({
   container: {
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   text: {
     color: 'black',
@@ -548,7 +542,7 @@ const lightStyles = StyleSheet.create({
 //dark mode style sheet
 const darkStyles = StyleSheet.create({
   container: {
-    backgroundColor: 'pink',
+    backgroundColor: '#121212',
   },
   text: {
     color: 'white',
@@ -557,5 +551,5 @@ const darkStyles = StyleSheet.create({
     color: '#ff6b6b',
   },
 });
-*/
+
 export default CalculateScreen;

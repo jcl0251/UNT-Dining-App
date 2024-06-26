@@ -10,3 +10,5 @@ npm install react-native-webview
 npm install react-native-paper
 npm install expo-font
 npm install expo-splash-screen
+npm install @react-navigation/drawer
+npm install react-native-paper
