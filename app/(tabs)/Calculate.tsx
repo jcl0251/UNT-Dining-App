@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { useContext } from 'react';
+import { ThemeContext } from '@/store/context';
 
 type FoodItem = {
   id: string;
@@ -28,6 +30,8 @@ type FoodItem = {
 
 const CalculateScreen: React.FC = () => {
   const navigation = useNavigation();
+  const styles=useStyles();
+  const{mainTheme,darkMode,setDarkMode}=useContext(ThemeContext);
   const [data, setData] = useState<FoodItem[]>([]);
   const [servings, setServings] = useState<{ [id: string]: number }>({});
   const [totalCalories, setTotalCalories] = useState(0);
@@ -120,7 +124,6 @@ const CalculateScreen: React.FC = () => {
 
 
   //before main check if user is in dark mode if yes change dynamicStyles to dark mode if no change to light mode
-  const dynamicStyles = isDarkMode ? darkStyles : lightStyles;
 
   const resetButtonPress = () => {
     
@@ -148,7 +151,7 @@ const CalculateScreen: React.FC = () => {
         </Pressable>
 
         {/*TOP HEADING*/}
-        <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
+        <Text style={styles.title}>Calculate</Text>
 
         {/*TABS*/}
         <View style={styles.tabContainer}>
@@ -180,7 +183,7 @@ const CalculateScreen: React.FC = () => {
                     <Text style={styles.buttonText}>-</Text>
                   </Pressable>
 
-                  <Text style={[styles.servingText, dynamicStyles.text]}>{servings[item.id] || 0}</Text>
+                  <Text style={[styles.servingText, styles.itemText]}>{servings[item.id] || 0}</Text>
                   <Pressable onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
                     <Text style={styles.buttonText}>+</Text>
                   </Pressable>
@@ -263,19 +266,22 @@ const CalculateScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function useStyles(){
+  const{mainTheme}=useContext(ThemeContext);
+  return StyleSheet.create({  
   container: {
     flex: 1,
     padding: 1,
+    backgroundColor:mainTheme.colors.background,
   },
   mainContent: {
     padding: 50,
-    //backgroundColor: 'lightgreen',
+    backgroundColor: mainTheme.colors.background,
     //marginBottom: 20,
   },
   title: {
     fontSize: 50,
-    color: 'white',
+    color: mainTheme.colors.foreground,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 0,
@@ -288,21 +294,21 @@ const styles = StyleSheet.create({
   itemContainer: {
     padding: 1,
     marginBottom: 10,
-    //backgroundColor: '#f0f0f0',
+    backgroundColor: 'grey',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   itemText: {
     fontSize: 18,
-    color: 'white',
+    color: mainTheme.colors.foreground,
     flex: 1,
     flexWrap: 'wrap',
     marginRight: 10,
   },
   resetText: {
     fontSize: 16,
-    color: 'white',
+    color: mainTheme.colors.foreground,
     alignSelf: 'center',
     justifyContent: 'center',
     marginBottom: 0,
@@ -344,7 +350,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 20,
-    color: 'white',
+    color: mainTheme.colors.foreground,
   },
   servingText: {
     fontSize: 18,
@@ -364,7 +370,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backButton: {
-    //backgroundColor: '#808080',
+    backgroundColor: 'grey',
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -420,12 +426,12 @@ const styles = StyleSheet.create({
   },
   buttonText3: {
     fontSize: 30,
-    color: 'white',
+    color: 'red',
     fontWeight: 'bold',
   },
   buttonText4: {
     fontSize: 20,
-    color: 'white',
+    color: 'blue',
     fontWeight: 'bold',
   },
   backButtonIcon: {
@@ -486,7 +492,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nutritionLabelContainer: {
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
@@ -517,7 +523,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     width: '100%',
   },
-});
+});}
 
 
 
@@ -525,11 +531,11 @@ const styles = StyleSheet.create({
 
 
 
-
+/*
 //light mode style sheet
 const lightStyles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: 'black',
   },
   text: {
     color: 'black',
@@ -542,7 +548,7 @@ const lightStyles = StyleSheet.create({
 //dark mode style sheet
 const darkStyles = StyleSheet.create({
   container: {
-    backgroundColor: '#121212',
+    backgroundColor: 'pink',
   },
   text: {
     color: 'white',
@@ -551,5 +557,5 @@ const darkStyles = StyleSheet.create({
     color: '#ff6b6b',
   },
 });
-
+*/
 export default CalculateScreen;
