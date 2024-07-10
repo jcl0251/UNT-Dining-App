@@ -59,6 +59,7 @@ const CalculateScreen: React.FC = () => {
           protein: doc.data().protein,
 
         }));
+        docs.sort((a,b) => a.name.localeCompare(b.name));
         setData(docs);
       } catch (err: any) {
         setError(err.message);
@@ -169,11 +170,11 @@ const CalculateScreen: React.FC = () => {
           {error ? (
             <Text style={styles.errorText}>Error: {error}</Text>
           ) : (
-            data.map(item => (
-              <View key={item.id} style={styles.itemContainer}>
-                <Pressable onPress={() => handleFoodPress(item)}>
-                  <Text style={styles.itemText}>{item.name}</Text>
-                </Pressable>
+            data.map(item => ( // KEEP THIS VVVV HANDLEFOODPRESS AS TEXT AND NOT PRESSABLE BC FLEX AND WRAP GETS MESSED UP
+              <View key={item.id} style={styles.itemContainer}> 
+                <Text onPress={() => handleFoodPress(item)} style={[styles.itemText, dynamicStyles.text]}> 
+                  {item.name}
+                </Text>
 
                 <View style={styles.buttonContainer}>
                   <Pressable onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
@@ -267,6 +268,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 1,
+    backgroundColor: '#d3d3d3', // BACKGROUND FOR CALCULATE PAGE. COLOR
   },
   mainContent: {
     padding: 50,
@@ -346,18 +348,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: 'white',
   },
-  servingText: {
+  servingText: { //Incrementer value between - and + containers
     fontSize: 18,
     paddingHorizontal: 10,
     minWidth: 40, //32 Ensure a minimum width for single digits
     maxWidth: 45,
     textAlign: 'center',
   },
-  totalContainer: {
+  totalContainer: { //total calories display
     padding: 20,
-    backgroundColor: '#D3D3D3',
+    backgroundColor: '#686868',
     alignItems: 'center',
+    justifyContent: 'center',
     marginVertical: 10,
+    borderRadius: 50,
+    width: 350,
+    margin: 'auto',
   },
   totalText: {
     fontSize: 20,
@@ -516,6 +522,15 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginVertical: 5,
     width: '100%',
+  },
+  testText: {
+    fontSize: 18,
+    color: 'white',
+    flex: 1,
+    flexWrap: 'wrap',
+    marginRight: 10,
+    flexGrow: 1,
+    flexShrink: 1,
   },
 });
 

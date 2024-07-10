@@ -26,7 +26,7 @@ headerImage={<Image source={require('@/assets/images/unt-banner.png')} style={st
 export default function CalculateScreen() {
 
 <ThemedView style={styles.headerText}>
-        <ThemedText type="title">Calculate functionality</ThemedText>
+        <ThemedText type="title">Plan functionality</ThemedText>
       </ThemedView>
 
   const navigation = useNavigation();
@@ -55,7 +55,7 @@ export default function CalculateScreen() {
       
       <View style={styles.mainContent}>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText>Calculate functionality</ThemedText>
+        <ThemedText>Under construction!</ThemedText>
       </ThemedView>
       
       <TouchableOpacity 
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   titleContainer: {
-    backgroundColor: 'lightgreen',
+    //backgroundColor: 'lightgreen',
     flexDirection: 'row',
     gap: 8,
   },
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginTop: 60, //distance from top of screen
   },
   mainContent: {
-    backgroundColor: 'lightgreen', // Set your desired background color here
+    //backgroundColor: 'lightgreen', // Set your desired background color here
     padding: 20,
   },
   button3: {

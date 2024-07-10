@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     flex: 1,
     //padding: 1,
     //marginTop: 40,
-    backgroundColor: '#cef5e2',
+    backgroundColor: '#cef5e2', // BACKGROUND COLOR FOR ENTIRE MAIN MENU. LIGHT GREENISH
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   calculateButton: {
-    backgroundColor: '#04873c', // Set your desired button color here
+    backgroundColor: '#04873c', // Dark greenish
     width: 200,
     height: 200,
     borderRadius: 100, // Make it a circle
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     left: '-10%', // Adjust this value to move the button left/right
   },
   planButton: {
-    backgroundColor: '#808080', // Set your desired button color here
+    backgroundColor: '#808080', // Greyish
     width: 200,
     height: 200,
     borderRadius: 100, // Make it a circle

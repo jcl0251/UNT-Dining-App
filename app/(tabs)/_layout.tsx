@@ -19,7 +19,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} /> // First 'home' is the icon it shows when selected. Second is when unselected.
           ),
         }}
       />
@@ -28,7 +28,7 @@ export default function TabLayout() {
         options={{
           title: 'Plan',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+            <TabBarIcon name={focused ? 'pizza' : 'pizza'} color={color} /> // First 'pizza' is the icon it shows when selected. Second is when unselected.
           ),
         }}
       />
@@ -37,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Calculate',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+            <TabBarIcon name={focused ? 'fast-food' : 'fast-food'} color={color} />  // First 'fast-food' is the icon it shows when selected. Second is when unselected.
           ),
         }}
       />
