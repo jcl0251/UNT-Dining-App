@@ -83,7 +83,6 @@ def find_ingredients(url):
     pattern = r'<p[^>]*id="(\d+)"[^>]*>(.*?)<\/p>'
     results = [p.get_text(strip=True) for p in ingredient_info]
     return results
-    
 
 # Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
