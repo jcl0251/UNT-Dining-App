@@ -76,6 +76,15 @@ def find_nutrition(url):
         #print(nutrients)
     return nutrients
 
+def find_ingredients(url):
+    soup = scrape(url)
+    
+    ingredient_info = soup.find_all('p', class_='modal-description-text')
+    pattern = r'<p[^>]*id="(\d+)"[^>]*>(.*?)<\/p>'
+    results = [p.get_text(strip=True) for p in ingredient_info]
+    return results
+    
+
 # Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
     header, ul = list_group
@@ -105,7 +114,7 @@ def link_firebase():
     database = firestore.client()
     return database
 
-def clear_firestore_collection(database, collection):
+def clear_firestore_collection(database, collection): # SO INFO DOESN'T OVERWRITE IN COLLECTIONS OTHER THAN LIBRARY
     collection_reference = database.collection(collection)
     docs = collection_reference.stream() # From fir
     for doc in docs:
@@ -113,10 +122,14 @@ def clear_firestore_collection(database, collection):
 
 def input_to_firestore(database, data, meal_type):
     collection_reference = database.collection(meal_type.lower())
+    ingredient_collection_reference = database.collection('ingredients')
+    library_collection_reference = database.collection('library')
+    
     for dish in data:
         dish_id = dish[0]
         dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
         nutrition = find_nutrition(dish_nutrition_url)
+        ingredients = find_ingredients(dish_nutrition_url)
         
         document_reference = collection_reference.document(dish_id) #Creates documents (entries) in the collection (mealtype). AKA puts meals in meals of day
         document_reference.set({
@@ -127,10 +140,11 @@ def input_to_firestore(database, data, meal_type):
             'cholesterol': nutrition[2],
             'sodium': nutrition[3],
             'total_carbohydrates': nutrition[4],
-            'protein': nutrition[5]
+            'protein': nutrition[5],
+            'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
+            'ingredients': ingredients[1] if len(ingredients) > 1 else ''
         })
         
-        library_collection_reference = database.collection('library')
         library_document_reference = library_collection_reference.document(dish_id) #Here we are just storying every ID into a library that wont be overwritten so we can essentially use a search bar
         library_document_reference.set({
             'name': dish[1],
@@ -140,7 +154,9 @@ def input_to_firestore(database, data, meal_type):
             'cholesterol': nutrition[2],
             'sodium': nutrition[3],
             'total_carbohydrates': nutrition[4],
-            'protein': nutrition[5]
+            'protein': nutrition[5],
+            'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
+            'ingredients': ingredients[1] if len(ingredients) > 1 else ''
         })
         
     
