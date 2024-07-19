@@ -1,19 +1,10 @@
-import React, {useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView, Pressable, Modal, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { db } from "../../firebaseConfig";
+import { DataContext} from '../../DataContext';
 import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/firestore"
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Font from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
 
 type FoodItem = {
   id: string;
@@ -24,56 +15,30 @@ type FoodItem = {
   sodium: number;
   total_carbohydrates: number;
   protein: number
+  allergens: string
+  ingredients: string
 }
 
 const CalculateScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { allData, isLoading, error } = useContext(DataContext);
   const [data, setData] = useState<FoodItem[]>([]);
   const [servings, setServings] = useState<{ [id: string]: number }>({});
   const [totalCalories, setTotalCalories] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
-  const [fontsLoaded, setFontsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('breakfast'); // Default to 'breakfast'
 
   //declaration of dark mode variables
   const colorScheme = useColorScheme();  //calls the usecolorscheme library
   const isDarkMode = colorScheme === 'dark';  //bool like variable to check if the phone is in dark mode or not
 
-  
-
-  useEffect(() => { // FETCHING THE DATA FROM THE DATABASE
-    const fetchData = async () => {
-      try {
-        const colRef = collection(db, activeTab); // Change to 'lunch' or 'dinner' as needed
-        const snapshot: QuerySnapshot<DocumentData> = await getDocs(colRef);
-        const docs: FoodItem[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-          calories: doc.data().calories,
-          total_fat: doc.data().total_fat,
-          cholesterol: doc.data().cholesterol,
-          sodium: doc.data().sodium,
-          total_carbohydrates: doc.data().total_carbohydrates,
-          protein: doc.data().protein,
-
-        }));
-        docs.sort((a,b) => a.name.localeCompare(b.name));
-        setData(docs);
-      } catch (err: any) {
-        setError(err.message);
-      }
-    };
-
-    fetchData();
-  }, [activeTab]);
-
-  const pressedButton = () => {
-  
-    navigation.navigate('index');
-  
-  }
+  useEffect(() => {
+    if (allData[activeTab]) {
+      console.log('Data for active tab:', allData[activeTab]);
+      setData(allData[activeTab]);
+    }
+  }, [activeTab, allData, isLoading]);
 
   const homeButtonPress = () => {
     //navigation.navigate('Calculate'); // Navigating to the 'Calculate' tab
@@ -135,6 +100,8 @@ const CalculateScreen: React.FC = () => {
     setTotalCalories(0); //set the total calories to 0
   };
 
+
+
   //MAIN
 
   return (
@@ -169,6 +136,8 @@ const CalculateScreen: React.FC = () => {
         <ScrollView style={styles.scrollBox}>
           {error ? (
             <Text style={styles.errorText}>Error: {error}</Text>
+          ) : isLoading ? (
+            <Text style={styles.loadingText}>Loading...</Text>
           ) : (
             data.map(item => ( // KEEP THIS VVVV HANDLEFOODPRESS AS TEXT AND NOT PRESSABLE BC FLEX AND WRAP GETS MESSED UP
               <View key={item.id} style={styles.itemContainer}> 
@@ -177,14 +146,14 @@ const CalculateScreen: React.FC = () => {
                 </Text>
 
                 <View style={styles.buttonContainer}>
-                  <Pressable onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
+                  <TouchableOpacity onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
                     <Text style={styles.buttonText}>-</Text>
-                  </Pressable>
+                  </TouchableOpacity>
 
                   <Text style={[styles.servingText, dynamicStyles.text]}>{servings[item.id] || 0}</Text>
-                  <Pressable onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
+                  <TouchableOpacity onPress={() => handleIncrement(item.id, item.calories)} style={styles.incrementButton}>
                     <Text style={styles.buttonText}>+</Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
               </View>
             ))
@@ -531,6 +500,12 @@ const styles = StyleSheet.create({
     marginRight: 10,
     flexGrow: 1,
     flexShrink: 1,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: 'gray',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 

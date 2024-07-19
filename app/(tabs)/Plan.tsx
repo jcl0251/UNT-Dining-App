@@ -1,35 +1,46 @@
-import React from 'react';
-import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity } from 'react-native';
+import React, {useEffect, useState } from 'react';
+import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView, Pressable, Modal, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { db } from "../../firebaseConfig";
+import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/firestore"
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+
+
+type FoodItem = {
+  id: string;
+  name: string;
+  calories: number;
+  total_fat: number;
+  cholesterol: number;
+  sodium: number;
+  total_carbohydrates: number;
+  protein: number
+  allergens: string
+  ingredients: string
+}
+
+const PlanScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const [data, setData] = useState<FoodItem[]>([]);
 
 
 
-
-
-
-//Ionicons size={310} name="code-slash" style={styles.headerImage}
-//headerImage={<Text style={styles.headerText}>UNT</Text>}
-
-//<Image source={require('@/assets/images/unt-banner.png')} style={{ alignSelf: 'center' }} />
-
-/*
-headerBackgroundColor={{ light: '#38CB82', dark: '#198450' }}
-headerImage={<Image source={require('@/assets/images/unt-banner.png')} style={styles.headerImage}>
-*/
-export default function CalculateScreen() {
 
 <ThemedView style={styles.headerText}>
         <ThemedText type="title">Plan functionality</ThemedText>
       </ThemedView>
 
-  const navigation = useNavigation();
+
   
   const homeButtonPress = () => {
     //navigation.navigate('Calculate'); // Navigating to the 'Calculate' tab
@@ -38,20 +49,7 @@ export default function CalculateScreen() {
 
 
   return (
-    <ParallaxScrollView // Function that enables parallax scroll. Makes the UNT banner in the back move at different pace.
-    headerBackgroundColor={{ light: '#5aaf7e', dark: '#198450' }}
-      headerImage={(
-      <View style={styles.headerContainer}>
-        <Image
-          source={require('@/assets/images/unt-banner.png')}
-          style={styles.headerImage}
-        />
-        <View style={styles.titleContainer}>
-          <Text style={styles.headerText}></Text>
-        </View>
-      </View>
-    )}
-  >
+    <SafeAreaView>
       
       <View style={styles.mainContent}>
       <ThemedView style={styles.titleContainer}>
@@ -70,7 +68,7 @@ export default function CalculateScreen() {
 
 
       </View>
-    </ParallaxScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -130,3 +128,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default PlanScreen;
