@@ -15,6 +15,7 @@ const firebaseConfig = {
   messagingSenderId: "650111042622",
   appId: "1:650111042622:web:d214f5295e99c09627fd6f",
   measurementId: "G-ZSSGZBCTHF",
+  databaseURL: "" // Add this to satisfy the requirement. I dont think its required if you're not using realtime database
 };
 
 // Initialize Firebase
