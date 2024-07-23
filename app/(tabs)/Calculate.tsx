@@ -7,16 +7,36 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type FoodItem = {
-  id: string;
-  name: string;
-  calories: number;
-  total_fat: number;
-  cholesterol: number;
-  sodium: number;
-  total_carbohydrates: number;
+  id: string
+  name: string
+  calories: number
+  total_fat: number
+  cholesterol: number
+  sodium: number
+  total_carbohydrates: number
   protein: number
   allergens: string
   ingredients: string
+  serving_size: number
+  is_each: boolean
+  is_high_calorie: boolean
+  is_high_protein: boolean
+  is_high_fat: boolean
+  is_high_carbs: boolean
+  is_halal: boolean
+  is_gluten_free: boolean
+  is_allergen_free: boolean
+  total_fat_percent: number
+  sodium_percent: number
+  total_carbohydrates_percent: number
+  saturated_fat: number
+  trans_fat: number
+  saturated_fat_percent: number
+  dietary_fiber: number
+  dietary_fiber_percent: number
+  added_sugars_percent: number
+  added_sugars: number
+  sugars: number
 }
 
 const CalculateScreen: React.FC = () => {
@@ -25,6 +45,9 @@ const CalculateScreen: React.FC = () => {
   const [data, setData] = useState<FoodItem[]>([]);
   const [servings, setServings] = useState<{ [id: string]: number }>({});
   const [totalCalories, setTotalCalories] = useState(0);
+  const [totalProtein, setTotalProtein] = useState(0);
+  const [totalCarbs, setTotalCarbs] = useState(0);
+  const [totalFat, setTotalFat] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [activeTab, setActiveTab] = useState<string>('breakfast'); // Default to 'breakfast'
@@ -35,7 +58,7 @@ const CalculateScreen: React.FC = () => {
 
   useEffect(() => {
     if (allData[activeTab]) {
-      console.log('Data for active tab:', allData[activeTab]);
+      //console.log('Data for active tab:', allData[activeTab]);
       setData(allData[activeTab]);
     }
   }, [activeTab, allData, isLoading]);
@@ -47,7 +70,7 @@ const CalculateScreen: React.FC = () => {
 
   const tabButtonStyle = (tabName: string) => ({
     ...styles.tabButton,
-    backgroundColor: activeTab === tabName ? '#9edbeb' : '#808080',
+    backgroundColor: activeTab === tabName ? '#86b9a3' : '#4b7863',
   });
 
   const tabTextStyle = (tabName: string) => ({
@@ -59,6 +82,9 @@ const CalculateScreen: React.FC = () => {
     setServings(prevServings => {
       const newServings = { ...prevServings, [id]: (prevServings[id] || 0) + 1 };
       calculateTotalCalories(newServings);
+      calculateTotalProtein(newServings); //2
+      calculateTotalCarbs(newServings); //3
+      calculateTotalFat(newServings); //4
       return newServings;
     });
   };
@@ -67,6 +93,9 @@ const CalculateScreen: React.FC = () => {
     setServings(prevServings => {
       const newServings = { ...prevServings, [id]: Math.max((prevServings[id] || 0) - 1, 0) };
       calculateTotalCalories(newServings);
+      calculateTotalProtein(newServings); //2
+      calculateTotalCarbs(newServings); //3
+      calculateTotalFat(newServings); //4
       return newServings;
     });
   };
@@ -77,6 +106,30 @@ const CalculateScreen: React.FC = () => {
       total += (newServings[item.id] || 0) * (item.calories || 0);
     });
     setTotalCalories(total);
+  };
+
+  const calculateTotalProtein = (newServings: { [id: string]: number }) => { // Key-value pair of food ID and its number of servings
+    let total = 0;
+    data.forEach(item => {
+      total += (newServings[item.id] || 0) * (item.protein || 0);
+    });
+    setTotalProtein(Math.round(total));
+  };
+
+  const calculateTotalCarbs = (newServings: { [id: string]: number }) => { // Key-value pair of food ID and its number of servings
+    let total = 0;
+    data.forEach(item => {
+      total += (newServings[item.id] || 0) * (item.total_carbohydrates || 0);
+    });
+    setTotalCarbs(Math.round(total));
+  };
+
+  const calculateTotalFat = (newServings: { [id: string]: number }) => { // Key-value pair of food ID and its number of servings
+    let total = 0;
+    data.forEach(item => {
+      total += (newServings[item.id] || 0) * (item.total_fat || 0);
+    });
+    setTotalFat(Math.round(total));
   };
 
   const handleFoodPress = (food: FoodItem) => {
@@ -98,6 +151,9 @@ const CalculateScreen: React.FC = () => {
 
     setServings(resetServings); //set the serving (numbers) to their reset default value which is 0
     setTotalCalories(0); //set the total calories to 0
+    setTotalProtein(0); //set the total protein to 0
+    setTotalCarbs(0); //set the total carbs to 0
+    setTotalFat(0); //set the total fat to 0
   };
 
 
@@ -116,7 +172,7 @@ const CalculateScreen: React.FC = () => {
         </Pressable>
 
         {/*TOP HEADING*/}
-        <Text style={[styles.title, dynamicStyles.text]}>Calculate</Text>
+        <Text style={styles.title}>Calculate</Text>
 
         {/*TABS*/}
         <View style={styles.tabContainer}>
@@ -141,9 +197,10 @@ const CalculateScreen: React.FC = () => {
           ) : (
             data.map(item => ( // KEEP THIS VVVV HANDLEFOODPRESS AS TEXT AND NOT PRESSABLE BC FLEX AND WRAP GETS MESSED UP
               <View key={item.id} style={styles.itemContainer}> 
-                <Text onPress={() => handleFoodPress(item)} style={[styles.itemText, dynamicStyles.text]}> 
-                  {item.name}
-                </Text>
+                
+                <TouchableOpacity onPress={() => handleFoodPress(item)} style={styles.itemText}>
+                    <Text style={styles.wordText}>{item.name}</Text>
+                  </TouchableOpacity>
 
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity onPress={() => handleDecrement(item.id, item.calories)} style={styles.decrementButton}>
@@ -161,12 +218,7 @@ const CalculateScreen: React.FC = () => {
         </ScrollView>
 
         
-        <Pressable 
-          style={styles.resetButton} //changes the style of the button to the button style at the bottom
-          onPress={resetButtonPress} //takes you to calculate tab when pressed
-        > 
-            <Text style={styles.resetText}>Reset</Text>
-        </Pressable>
+
 
         <Modal visible={modalOpen} animationType='slide'>
           <SafeAreaView style={styles.safeArea}>
@@ -180,40 +232,79 @@ const CalculateScreen: React.FC = () => {
                 </Pressable>
                 {selectedFood && (
                   <View style={styles.nutritionLabelContainer}>
-                    <Text style={styles.labelText}>Nutrition Facts</Text>
-                    <View style={styles.horizontalLine} />
                     <Text style={styles.itemName}>{selectedFood.name}</Text>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine3} />
+                    <Text style={styles.labelText1}>Nutrition Facts</Text>
+                    <View style={styles.horizontalLine4} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Calories</Text>
-                      <Text style={styles.valueText}>{selectedFood.calories}</Text>
+                      <Text style={styles.labelText2}>Serving Size</Text>
+                      <Text style={styles.valueText2}>{selectedFood.serving_size}</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine1} />
+                    <View style={styles.row2}>
+                      <Text style={styles.labelText5}>Amount per serving</Text>
+                    </View>
+                    <View style={styles.horizontalLine4} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Total Fat</Text>
-                      <Text style={styles.valueText}>{selectedFood.total_fat}g</Text>
+                      <Text style={styles.labelText1}>Calories</Text>
+                      <Text style={styles.valueText1}>{selectedFood.calories}</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine2} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Cholesterol</Text>
-                      <Text style={styles.valueText}>{selectedFood.cholesterol}mg</Text>
+                      <Text style={styles.labelText3}>Total Fat</Text>
+                      <Text style={styles.valueText3}>{selectedFood.total_fat}g</Text>
+                      <Text style={styles.percentText}>{selectedFood.total_fat_percent.toFixed(0)}%</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine5} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Sodium</Text>
-                      <Text style={styles.valueText}>{selectedFood.sodium}mg</Text>
+                      <Text style={styles.labelText4}>  Saturated Fat</Text>
+                      <Text style={styles.valueText3}>{selectedFood.saturated_fat}g</Text>
+                      <Text style={styles.percentText}>{selectedFood.saturated_fat_percent.toFixed(0)}%</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine5} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Total Carbohydrates</Text>
-                      <Text style={styles.valueText}>{selectedFood.total_carbohydrates}g</Text>
+                      <Text style={styles.labelText4}>  Trans Fat</Text>
+                      <Text style={styles.valueText3}>{selectedFood.trans_fat}g</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine5} />
                     <View style={styles.row}>
-                      <Text style={styles.labelText}>Protein</Text>
-                      <Text style={styles.valueText}>{selectedFood.protein}g</Text>
+                      <Text style={styles.labelText3}>Cholesterol</Text>
+                      <Text style={styles.valueText3}>{selectedFood.cholesterol}mg</Text>
                     </View>
-                    <View style={styles.horizontalLine} />
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText3}>Sodium</Text>
+                      <Text style={styles.valueText3}>{selectedFood.sodium}mg</Text>
+                      <Text style={styles.percentText}>{selectedFood.sodium_percent.toFixed(0)}%</Text>
+                    </View>
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText3}>Total Carbohydrates</Text>
+                      <Text style={styles.valueText3}>{selectedFood.total_carbohydrates}g</Text>
+                      <Text style={styles.percentText}>{selectedFood.total_carbohydrates_percent.toFixed(0)}%</Text>
+                    </View>
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText4}>  Dietary Fiber</Text>
+                      <Text style={styles.valueText3}>{selectedFood.dietary_fiber}g</Text>
+                      <Text style={styles.percentText}>{selectedFood.dietary_fiber_percent.toFixed(0)}%</Text>
+                    </View>
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText4}>  Sugars</Text>
+                      <Text style={styles.valueText3}>{selectedFood.sugars}g</Text>
+                    </View>
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText4}>  </Text>
+                      <Text style={styles.valueText4}>Includes {selectedFood.added_sugars}g Added Sugars</Text>
+                      <Text style={styles.percentText}>{selectedFood.added_sugars_percent.toFixed(0)}%</Text>
+                    </View>
+                    <View style={styles.horizontalLine5} />
+                    <View style={styles.row}>
+                      <Text style={styles.labelText3}>Protein</Text>
+                      <Text style={styles.valueText3}>{selectedFood.protein}g</Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -224,9 +315,23 @@ const CalculateScreen: React.FC = () => {
         
 
         <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total Calories: {totalCalories}</Text>
+          <View style={styles.totalTextLeft}>
+            <Text style={styles.totalTextLeft}>CALORIES: {totalCalories}</Text>
+          </View>
+          <View style={styles.totalTextRight}>
+            <Text style={styles.totalText}>Protein : {totalProtein}g</Text>
+            <Text style={styles.totalText}>Carbs : {totalCarbs}g</Text>
+            <Text style={styles.totalText}>Fat : {totalFat}g</Text>
+          </View>
+          
         </View>
 
+        <Pressable 
+          style={styles.resetButton} //changes the style of the button to the button style at the bottom
+          onPress={resetButtonPress} //takes you to calculate tab when pressed
+        > 
+            <Text style={styles.resetText}>Reset</Text>
+        </Pressable>
         
       </View>
     </SafeAreaView>
@@ -237,7 +342,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 1,
-    backgroundColor: '#d3d3d3', // BACKGROUND FOR CALCULATE PAGE. COLOR
+    backgroundColor: '#cbdbd4', // BACKGROUND FOR CALCULATE PAGE. COLOR
   },
   mainContent: {
     padding: 50,
@@ -246,15 +351,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 50,
-    color: 'white',
+    fontWeight: 'bold',
+    color: '#689882',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
+    marginBottom: -30,
     top: '-8%',
     left: '25%',
   },
   scrollBox: {
     flex: 1,
+    backgroundColor: '#86b9a3',
   },
   itemContainer: {
     padding: 1,
@@ -263,13 +370,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+        //borderRadius: 20,
   },
   itemText: {
-    fontSize: 18,
+    fontSize: 39,
     color: 'white',
     flex: 1,
     flexWrap: 'wrap',
     marginRight: 10,
+    borderRadius: 7,
+    backgroundColor: '#609080',
+    
+    //height: '5%',
+    //width: '25%',
+    padding: 5,
+    //justifyContent: 'center',
+    //alignItems: 'center',
+    //marginTop: 5,
+
+  },
+  wordText: {
+    fontSize: 15,
+    color: 'white',
+    //backgroundColor: '#4b7863',
+    //paddingHorizontal: 7, // Adjust the horizontal padding as needed
+    //paddingVertical: 2, // Adjust the vertical padding as needed
+    //borderRadius: 50,
   },
   resetText: {
     fontSize: 16,
@@ -279,42 +405,45 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   resetButton: {
-    backgroundColor: '#808080',
-    height: '3%',
-    width: '17%',
+    backgroundColor: '#4b7863',
+    height: '5%',
+    width: '25%',
     padding: 2,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 'auto',
     marginRight: 'auto',
     marginTop: 5,
+    borderRadius: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   incrementButton: {
-    backgroundColor: '#4bb153',
-    //padding: 10, //removed to make the - symbol at the ceter (replaced by justify and allign)
+    backgroundColor: 'transparent', // Transparent background
     justifyContent: 'center',
     alignItems: 'center',
     width: 35,
-    height: 45,
-    borderRadius: 5, // Make it a circle
+    height: 35,
+    borderRadius: 17.5, // Half of the width and height to make it a circle
+    borderWidth: 2, // Border width to create the hollow effect
+    borderColor: 'white', // White border color
     marginHorizontal: 5,
   },
   decrementButton: {
-    backgroundColor: '#f55651',
-    //padding: 10, //removed to make the - symbol at the ceter (replaced by justify and allign)
+    backgroundColor: 'transparent', // Transparent background
     justifyContent: 'center',
     alignItems: 'center',
     width: 35,
-    height: 45,
-    borderRadius: 5, // Make it a circle
-    marginHorizontal: 1,
+    height: 35,
+    borderRadius: 17.5, // Half of the width and height to make it a circle
+    borderWidth: 2, // Border width to create the hollow effect
+    borderColor: 'white', // White border color
+    marginHorizontal: 5,
   },
   buttonText: {
-    fontSize: 20,
+    fontSize: 25,
     color: 'white',
   },
   servingText: { //Incrementer value between - and + containers
@@ -323,20 +452,40 @@ const styles = StyleSheet.create({
     minWidth: 40, //32 Ensure a minimum width for single digits
     maxWidth: 45,
     textAlign: 'center',
+    color: 'white',
   },
   totalContainer: { //total calories display
-    padding: 20,
-    backgroundColor: '#686868',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#689882',
     marginVertical: 10,
-    borderRadius: 50,
+    borderRadius: 20,
     width: 350,
     margin: 'auto',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
   },
   totalText: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: 'white',
+  },
+  totalTextLeft: {
+    flex: 1,
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: 'white',
+    alignContent: 'flex-start',
+    justifyContent: 'center',
+    letterSpacing: -2,
+  },
+  totalTextRight: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    alignContent: 'flex-end',
+    alignItems: 'flex-end',
   },
   backButton: {
     //backgroundColor: '#808080',
@@ -428,7 +577,9 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 10,
+    marginBottom: -4,
+    //color: '#4b7863',
+    
   },
   tabButton: {
     paddingVertical: 10,
@@ -466,8 +617,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
   },
-  labelText: {
+  labelText1: {
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  labelText2: {
     fontSize: 24,
+    fontWeight: 'bold',
+  },
+  labelText3: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  labelText4: {
+    fontSize: 16,
+  },
+  labelText5: {
+    fontSize: 12,
     fontWeight: 'bold',
   },
   itemName: {
@@ -479,15 +645,76 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginVertical: 5,
+    alignItems: 'baseline',
   },
-  valueText: {
-    fontSize: 18,
+  row2: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'stretch',
+  },
+  valueText1: {
+    fontSize: 40,
+    fontWeight: 'bold',
     fontFamily: 'Arial',
   },
-  horizontalLine: {
+  valueText2: {
+    fontSize: 20,
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: 'bold',
+    fontFamily: 'Arial',
+  },
+  valueText3: {
+    fontSize: 15,
+    flex: 1,
+    textAlign: 'left',
+    fontFamily: 'Arial',
+    marginLeft: 2,
+  },
+  valueText4: {
+    fontSize: 15,
+    textAlign: 'left',
+    fontFamily: 'Arial',
+    marginLeft: 2,
+  },
+  percentText: {
+    fontSize: 17,
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: 'bold',
+    fontFamily: 'Arial',
+  },
+  horizontalLine1: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 10,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
+  horizontalLine2: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 5,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
+  horizontalLine3: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 3,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
+  horizontalLine4: {
     borderBottomColor: 'black',
     borderBottomWidth: 1,
+    alignSelf: 'stretch',
+    marginVertical: 5,
+    width: '100%',
+  },
+  horizontalLine5: {
+    borderBottomColor: 'black',
+    borderBottomWidth: .4,
     alignSelf: 'stretch',
     marginVertical: 5,
     width: '100%',
