@@ -48,41 +48,104 @@ def find_meal_of_day(url):
 def find_nutrition(url):
     soup = scrape(url)
     
-    
     table = soup.find('tbody') # Table containing all of the nutritional info
-    labels = table.find_all('div', class_='label')
-    nutrients = [0, 0, 0, 0, 0, 0]
+    labels = table.find_all('div', class_='label') + table.find_all('div', class_='labellight')
+    percentages = table.find_all('div', class_='dv')
+    
+    nutrients = {
+        'Calories': 0,
+        'Total Fat': 0,
+        'Saturated Fat': 0,
+        'Trans Fat': 0,
+        'Cholesterol': 0,
+        'Sodium': 0,
+        'Total Carbohydrates': 0,
+        'Dietary Fiber': 0,
+        'Sugars': 0,
+        'Added Sugars': 0,
+        'Protein': 0
+    }
+    
+    nutrient_percentages = {
+        'Total Fat Percent': 0,
+        'Saturated Fat Percent': 0,
+        'Sodium Percent': 0,
+        'Total Carbohydrates Percent': 0,
+        'Dietary Fiber Percent': 0,
+        'Added Sugars Percent': 0
+    }
+
+    # List to match labels to their percentage values
+    label_order = [
+        'Total Fat', 'Saturated Fat', 'Sodium', 'Total Carbohydrates', 
+        'Dietary Fiber', 'Added Sugars'
+    ]
+    
+    percentage_values = []
+    for percent in percentages:
+        percent_text = percent.get_text(strip=True).replace('%', '')
+        if percent_text.isdigit():
+            percentage_values.append(float(percent_text))
+    
+    print("Debug: All percentage divs")
+    for percent in percentage_values:
+        print(percent)
+    
+    # Adjust the index to correctly align percentages
+    for i, nutrient_name in enumerate(label_order):
+        if i < len(percentage_values):
+            nutrient_percentages[f'{nutrient_name} Percent'] = percentage_values[i]
+            print(f"Debug: {nutrient_name} assigned {percentage_values[i]}%")
     
     for label in labels:
         label_text = label.get_text(strip=True)
-        # Split the label_text into name and value
         match_label = re.match(r'([a-zA-Z\s]+)([\d\.]+)(g|mg)?', label_text)
         if match_label:
             nutrient_name = match_label.group(1).strip()
             nutrient_value = float(match_label.group(2))
-            #print(f"Found {nutrient_name}: {nutrient_value}")
-            if nutrient_name == "Calories":
-                nutrients[0] = nutrient_value
-            elif nutrient_name == "Total Fat":
-                nutrients[1] = nutrient_value
-            elif nutrient_name == "Cholesterol":
-                nutrients[2] = nutrient_value
-            elif nutrient_name == "Sodium":
-                nutrients[3] = nutrient_value
-            elif nutrient_name == "Total Carbohydrates":
-                nutrients[4] = nutrient_value
-            elif nutrient_name == "Protein":
-                nutrients[5] = nutrient_value
-        #print(nutrients)
+            if nutrient_name in nutrients:
+                nutrients[nutrient_name] = nutrient_value
+        
+        # Handle 'Includes Xg Added Sugars'
+        if 'Includes' in label_text:
+            match_added_sugars = re.search(r'Includes\s([\d\.]+)g\sAdded\sSugars', label_text)
+            if match_added_sugars:
+                added_sugars_value = float(match_added_sugars.group(1))
+                nutrients['Added Sugars'] = added_sugars_value
+
+    nutrients.update(nutrient_percentages)
+    
+    print("Debug: Nutrients with percentages")
+    for nutrient, value in nutrients.items():
+        print(f"{nutrient}: {value}")
+    
     return nutrients
 
 def find_ingredients(url):
+    
     soup = scrape(url)
     
     ingredient_info = soup.find_all('p', class_='modal-description-text')
-    pattern = r'<p[^>]*id="(\d+)"[^>]*>(.*?)<\/p>'
     results = [p.get_text(strip=True) for p in ingredient_info]
     return results
+
+def find_serving_size(url):
+    soup = scrape(url)
+    
+    serving_size_tag = soup.find('span', class_='highlighted')
+    if serving_size_tag:
+        serving_size = serving_size_tag.get_text(strip=True)
+        is_each = 'each' in serving_size.lower() # This assigns true or false to variable IF 'each' is detected in the serving_size
+        return serving_size, is_each
+    return None, False #If there is no serving size tag or each!? Shouldn't hit but its a failsafe
+
+def serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each): # Takes all of these and calculates if high/low etc
+    is_high_calorie = calories >= 400 # High calorie is 400+ calories in one serving
+    is_high_protein = protein >= (calories/10) # High protein is 1+ gram protein per 10 calories
+    is_high_fat = total_fat > 17.5 / 3.5 # per oz. Its 100g or 3.5 oz
+    is_high_carbs = total_carbohydrates >= 15 # If >= 15 g, its high carbs.
+    return is_high_calorie, is_high_protein, is_high_fat, is_high_carbs
+    
 
 # Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
@@ -121,7 +184,6 @@ def clear_firestore_collection(database, collection): # SO INFO DOESN'T OVERWRIT
 
 def input_to_firestore(database, data, meal_type):
     collection_reference = database.collection(meal_type.lower())
-    ingredient_collection_reference = database.collection('ingredients')
     library_collection_reference = database.collection('library')
     
     for dish in data:
@@ -129,33 +191,86 @@ def input_to_firestore(database, data, meal_type):
         dish_nutrition_url = f"https://diningmenus.unt.edu/label.aspx?recipeNum={dish_id}"
         nutrition = find_nutrition(dish_nutrition_url)
         ingredients = find_ingredients(dish_nutrition_url)
+        serving_size, is_each = find_serving_size(dish_nutrition_url)
+        allergens = ingredients[0].lower().split(',') if ingredients else []
+        
+        calories = nutrition['Calories']
+        total_fat = nutrition['Total Fat']
+        protein = nutrition['Protein']
+        total_carbohydrates = nutrition['Total Carbohydrates']
+        
+        is_high_calorie, is_high_protein, is_high_fat, is_high_carbs = serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each)
+        is_halal = "pork" not in allergens
+        is_gluten_free = "wheat" not in allergens
+        is_allergen_free = len(allergens) == 0
+        
         
         document_reference = collection_reference.document(dish_id) #Creates documents (entries) in the collection (mealtype). AKA puts meals in meals of day
         document_reference.set({
             'name': dish[1],
             'header': dish[2],
-            'calories': nutrition[0],
-            'total_fat': nutrition[1],
-            'cholesterol': nutrition[2],
-            'sodium': nutrition[3],
-            'total_carbohydrates': nutrition[4],
-            'protein': nutrition[5],
+            'calories': calories,
+            'total_fat': total_fat,
+            'saturated_fat': nutrition['Saturated Fat'],
+            'trans_fat': nutrition['Trans Fat'],
+            'cholesterol': nutrition['Cholesterol'],
+            'sodium': nutrition['Sodium'],
+            'total_carbohydrates': total_carbohydrates,
+            'dietary_fiber': nutrition['Dietary Fiber'],
+            'sugars': nutrition['Sugars'],
+            'added_sugars': nutrition['Added Sugars'],
+            'protein': protein,
+            'total_fat_percent': nutrition.get('Total Fat Percent', 0),
+            'saturated_fat_percent': nutrition.get('Saturated Fat Percent', 0),
+            'sodium_percent': nutrition.get('Sodium Percent', 0),
+            'total_carbohydrates_percent': nutrition.get('Total Carbohydrates Percent', 0),
+            'dietary_fiber_percent': nutrition.get('Dietary Fiber Percent', 0),
+            'added_sugars_percent': nutrition.get('Added Sugars Percent', 0),
             'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
-            'ingredients': ingredients[1] if len(ingredients) > 1 else ''
+            'ingredients': ingredients[1] if len(ingredients) > 1 else '',
+            'serving_size': serving_size,
+            'is_each': is_each,
+            'is_high_calorie': is_high_calorie,
+            'is_high_protein': is_high_protein,
+            'is_high_fat': is_high_fat,
+            'is_high_carbs': is_high_carbs,
+            'is_halal': is_halal,
+            'is_gluten_free': is_gluten_free,
+            'is_allergen_free': is_allergen_free,
         })
         
         library_document_reference = library_collection_reference.document(dish_id) #Here we are just storying every ID into a library that wont be overwritten so we can essentially use a search bar
         library_document_reference.set({
             'name': dish[1],
             'header': dish[2],
-            'calories': nutrition[0],
-            'total_fat': nutrition[1],
-            'cholesterol': nutrition[2],
-            'sodium': nutrition[3],
-            'total_carbohydrates': nutrition[4],
-            'protein': nutrition[5],
+            'calories': calories,
+            'total_fat': total_fat,
+            'saturated_fat': nutrition['Saturated Fat'],
+            'trans_fat': nutrition['Trans Fat'],
+            'cholesterol': nutrition['Cholesterol'],
+            'sodium': nutrition['Sodium'],
+            'total_carbohydrates': total_carbohydrates,
+            'dietary_fiber': nutrition['Dietary Fiber'],
+            'sugars': nutrition['Sugars'],
+            'added_sugars': nutrition['Added Sugars'],
+            'protein': protein,
+            'total_fat_percent': nutrition.get('Total Fat Percent', 0),
+            'saturated_fat_percent': nutrition.get('Saturated Fat Percent', 0),
+            'sodium_percent': nutrition.get('Sodium Percent', 0),
+            'total_carbohydrates_percent': nutrition.get('Total Carbohydrates Percent', 0),
+            'dietary_fiber_percent': nutrition.get('Dietary Fiber Percent', 0),
+            'added_sugars_percent': nutrition.get('Added Sugars Percent', 0),
             'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
-            'ingredients': ingredients[1] if len(ingredients) > 1 else ''
+            'ingredients': ingredients[1] if len(ingredients) > 1 else '',
+            'serving_size': serving_size,
+            'is_each': is_each,
+            'is_high_calorie': is_high_calorie,
+            'is_high_protein': is_high_protein,
+            'is_high_fat': is_high_fat,
+            'is_high_carbs': is_high_carbs,
+            'is_halal': is_halal,
+            'is_gluten_free': is_gluten_free,
+            'is_allergen_free': is_allergen_free,
         })
         
     
@@ -181,6 +296,3 @@ if __name__ == "__main__":
             data = cleanup_list_group(list_group)
             all_data[meal_type].extend(data)
             input_to_firestore(database, data, meal_type)
-            #input_data(data, meal_type)
-            #export_to_CSV(data, meal_type)
-    #input("\nPress Enter to close...") #Just for testing with executable
