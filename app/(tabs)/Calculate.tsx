@@ -6,9 +6,11 @@ import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/fires
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+
 type FoodItem = {
   id: string
   name: string
+  mealType: string,
   calories: number
   total_fat: number
   cholesterol: number
@@ -20,12 +22,14 @@ type FoodItem = {
   serving_size: number
   is_each: boolean
   is_high_calorie: boolean
+  is_low_calorie: boolean
   is_high_protein: boolean
   is_high_fat: boolean
   is_high_carbs: boolean
   is_halal: boolean
   is_gluten_free: boolean
   is_allergen_free: boolean
+  is_vegan: boolean
   total_fat_percent: number
   sodium_percent: number
   total_carbohydrates_percent: number
@@ -376,7 +380,6 @@ const styles = StyleSheet.create({
     fontSize: 39,
     color: 'white',
     flex: 1,
-    flexWrap: 'wrap',
     marginRight: 10,
     borderRadius: 7,
     backgroundColor: '#609080',
@@ -392,6 +395,7 @@ const styles = StyleSheet.create({
   wordText: {
     fontSize: 15,
     color: 'white',
+    flexWrap: 'wrap',
     //backgroundColor: '#4b7863',
     //paddingHorizontal: 7, // Adjust the horizontal padding as needed
     //paddingVertical: 2, // Adjust the vertical padding as needed

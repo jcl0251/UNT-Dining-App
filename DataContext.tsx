@@ -5,6 +5,7 @@ import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/fires
 type FoodItem = {
   id: string
   name: string
+  mealType: string,
   calories: number
   total_fat: number
   cholesterol: number
@@ -16,12 +17,14 @@ type FoodItem = {
   serving_size: number
   is_each: boolean
   is_high_calorie: boolean
+  is_low_calorie: boolean
   is_high_protein: boolean
   is_high_fat: boolean
   is_high_carbs: boolean
   is_halal: boolean
   is_gluten_free: boolean
   is_allergen_free: boolean
+  is_vegan: boolean
   total_fat_percent: number
   sodium_percent: number
   total_carbohydrates_percent: number
@@ -67,6 +70,7 @@ const DataProvider = ({ children }: { children: ReactNode }) => {
               const docs: FoodItem[] = snapshot.docs.map(doc => ({
                 id: doc.id,
                 name: doc.data().name,
+                mealType: doc.data().meal_type,
                 calories: doc.data().calories,
                 total_fat: doc.data().total_fat,
                 cholesterol: doc.data().cholesterol,
@@ -78,12 +82,14 @@ const DataProvider = ({ children }: { children: ReactNode }) => {
                 serving_size: doc.data().serving_size,
                 is_each: doc.data().serving_size,
                 is_high_calorie: doc.data().is_high_calorie,
+                is_low_calorie: doc.data().is_low_calorie,
                 is_high_protein: doc.data().is_high_protein,
                 is_high_fat: doc.data().is_high_fat,
                 is_high_carbs: doc.data().is_high_carbs,
                 is_halal: doc.data().is_halal,
                 is_gluten_free: doc.data().is_gluten_free,
                 is_allergen_free: doc.data().is_allergen_free,
+                is_vegan: doc.data().is_vegan,
                 total_fat_percent: doc.data().total_fat_percent,
                 sodium_percent: doc.data().sodium_percent,
                 total_carbohydrates_percent: doc.data().total_carbohydrates_percent,

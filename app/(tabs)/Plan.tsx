@@ -1,56 +1,70 @@
-import React, {useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Image, Platform, Text, View, Button, Linking, TouchableOpacity, ScrollView, Pressable, Modal, useColorScheme, Switch, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
+import { StyleSheet, Image, Text, View, TouchableOpacity, ScrollView, Pressable, Modal, Switch, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { db } from "../../firebaseConfig";
-import { collection, getDocs, DocumentData, QuerySnapshot } from "firebase/firestore"
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { DataContext } from '../../DataContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Font from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 type FoodItem = {
-  id: string;
-  name: string;
-  calories: number;
-  total_fat: number;
-  cholesterol: number;
-  sodium: number;
-  total_carbohydrates: number;
-  protein: number;
-  allergens: string;
-  ingredients: string;
+  id: string
+  name: string
+  mealType: string,
+  calories: number
+  total_fat: number
+  cholesterol: number
+  sodium: number
+  total_carbohydrates: number
+  protein: number
+  allergens: string
+  ingredients: string
+  serving_size: number
+  is_each: boolean
+  is_high_calorie: boolean
+  is_low_calorie: boolean
+  is_high_protein: boolean
+  is_high_fat: boolean
+  is_high_carbs: boolean
+  is_halal: boolean
+  is_gluten_free: boolean
+  is_allergen_free: boolean
+  is_vegan: boolean
+  total_fat_percent: number
+  sodium_percent: number
+  total_carbohydrates_percent: number
+  saturated_fat: number
+  trans_fat: number
+  saturated_fat_percent: number
+  dietary_fiber: number
+  dietary_fiber_percent: number
+  added_sugars_percent: number
+  added_sugars: number
+  sugars: number
 }
 
 // Define the types for the modal content
 type ModalPage = 'initial' | 'mealSelection' | 'nutrientGoals';
-type MealType = 'loseWeight' | 'buildMuscle' | 'maintenance' | 'advanced';
+type MealType = 'loseWeight' | 'buildMuscle' | 'carbLoad' | 'advanced';
 
 const PlanScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { allData, isLoading, error } = useContext(DataContext);
   const [modalOpen, setModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<ModalPage>('initial');
   const [selectedGoal, setSelectedGoal] = useState<MealType | null>(null);
   const [pageHistory, setPageHistory] = useState<ModalPage[]>([]);
   const [isFirstVisit, setIsFirstVisit] = useState(true);
-
   const [isVegan, setIsVegan] = useState(false);
   const [isHalal, setIsHalal] = useState(false);
   const [isGluten, setIsGluten] = useState(false);
   const [isAllergens, setIsAllergens] = useState(false);
-
   const [caloriesMin, setCaloriesMin] = useState('');
   const [caloriesMax, setCaloriesMax] = useState('');
   const [proteinMin, setProteinMin] = useState('');
   const [fatMin, setFatMin] = useState('');
   const [carbohydratesMin, setCarbohydratesMin] = useState('');
+  const [mealType, setMealType] = useState<string | null>(null);
+  const [filteredData, setFilteredData] = useState<FoodItem[]>([]);
 
   const toggleVeganSwitch = () => setIsVegan(prev => !prev);
   const toggleHalalSwitch = () => setIsHalal(prev => !prev);
@@ -80,11 +94,17 @@ const PlanScreen: React.FC = () => {
     setPageHistory([]);
   };
 
+  const closeModalWithoutRemovingGoal = () => {
+    setModalOpen(false);
+    setPageHistory([]);
+  };
+
   const handleGoalSelection = (goal: MealType) => {
     setSelectedGoal(goal);
     if (goal === 'advanced') {
       openModal('nutrientGoals');
     }
+    console.log(goal)
   };
 
   const handleNutrientSubmit = () => {
@@ -94,6 +114,69 @@ const PlanScreen: React.FC = () => {
     console.log(`Fat Min: ${fatMin}`);
     console.log(`Carbs Min: ${carbohydratesMin}`);
     closeModal();
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstVisit) {
+        openModal('initial');
+        setIsFirstVisit(false);
+      }
+    }, [isFirstVisit])
+  );
+
+  const filterData = (type: string) => {
+    let filteredItems = allData[type] || [];
+    console.log('Initial items:', filteredItems.length);
+
+    if (isVegan) {
+      filteredItems = filteredItems.filter(item => item.is_vegan);
+      console.log('After vegan filter:', filteredItems.length);
+    }
+
+    if (isHalal) {
+      filteredItems = filteredItems.filter(item => item.is_halal);
+      console.log('After halal filter:', filteredItems.length);
+    }
+
+    if (isGluten) {
+      filteredItems = filteredItems.filter(item => item.is_gluten_free);
+      console.log('After gluten-free filter:', filteredItems.length);
+    }
+
+    if (isAllergens) {
+      filteredItems = filteredItems.filter(item => item.is_allergen_free);
+      console.log('After allergen-free filter:', filteredItems.length);
+    }
+
+    if (selectedGoal === 'loseWeight') {
+      filteredItems = filteredItems.filter(item => item.is_low_calorie);
+      console.log('After loseWeight filter:', filteredItems.length);
+    } else if (selectedGoal === 'buildMuscle') {
+      filteredItems = filteredItems.filter(item => item.is_high_protein);
+      console.log('After buildMuscle filter:', filteredItems.length);
+    } else if (selectedGoal === 'carbLoad') {
+      filteredItems = filteredItems.filter(item => item.is_high_carbs);
+      console.log('After carbLoad filter:', filteredItems.length);
+    }
+
+    setFilteredData(filteredItems);
+  };
+
+  const handleMealTypeSelection = (type: string) => {
+    setMealType(type);
+    filterData(type);
+  };
+
+  useEffect(() => {
+    if (mealType) {
+        filterData(mealType);
+    }
+}, [allData, isVegan, isHalal, isGluten, isAllergens, selectedGoal, mealType]);
+
+  const goBackToMealSelection = () => {
+    setMealType(null);
+    setFilteredData([]);
   };
 
   useFocusEffect(
@@ -204,11 +287,11 @@ const PlanScreen: React.FC = () => {
                       <TouchableOpacity
                         style={[
                           styles.modalButton,
-                          selectedGoal === 'maintenance' && styles.selectedButton,
+                          selectedGoal === 'carbLoad' && styles.selectedButton,
                         ]}
-                        onPress={() => handleGoalSelection('maintenance')}
+                        onPress={() => handleGoalSelection('carbLoad')}
                       >
-                        <Text style={styles.modalButtonText}>Maintenance</Text>
+                        <Text style={styles.modalButtonText}>Carb Load</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[
@@ -223,12 +306,12 @@ const PlanScreen: React.FC = () => {
                         <View style={styles.dropdownContainer}>
                           <Text style={styles.dropdownText}>
                             {selectedGoal === 'loseWeight' && 'You will receive menu options with a lower calorie count.'}
-                            {selectedGoal === 'buildMuscle' && 'You will receive menu options with a higher protein and carb count.'}
-                            {selectedGoal === 'maintenance' && 'You will receive balanced menu options.'}
+                            {selectedGoal === 'buildMuscle' && 'You will receive menu options with a higher protein.'}
+                            {selectedGoal === 'carbLoad' && 'You will receive menu options with a higher carb count.'}
                           </Text>
                         </View>
                       )}
-                      <TouchableOpacity style={styles.modalButtonNext} onPress={closeModal}>
+                      <TouchableOpacity style={styles.modalButtonNext} onPress={closeModalWithoutRemovingGoal}>
                         <Text style={styles.modalButtonText}>CLOSE</Text>
                       </TouchableOpacity>
                     </>
@@ -281,24 +364,38 @@ const PlanScreen: React.FC = () => {
           </TouchableWithoutFeedback>
         </Modal>
 
+        {mealType ? (
+          <>
+            <Pressable style={styles.backButton} onPress={goBackToMealSelection}>
+              <MaterialIcons name='arrow-back' size={30} />
+            </Pressable>
+            <ScrollView style={styles.scrollBox}>
+              {filteredData.map(item => (
+                <View key={`${mealType}-${item.id}`} style={styles.itemContainer}>
+                  <Text style={styles.itemText}>{item.name}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </>
+        ) : (
+          <>
+            <Pressable style={styles.resetButton} onPress={() => handleMealTypeSelection('breakfast')}>
+              <Text style={styles.resetText}>Breakfast</Text>
+            </Pressable>
+
+            <Pressable style={styles.resetButton} onPress={() => handleMealTypeSelection('lunch')}>
+              <Text style={styles.resetText}>Lunch</Text>
+            </Pressable>
+
+            <Pressable style={styles.resetButton} onPress={() => handleMealTypeSelection('dinner')}>
+              <Text style={styles.resetText}>Dinner</Text>
+            </Pressable>
+            <TouchableOpacity style={styles.openModalButton} onPress={() => openModal('initial')}>
+              <Text style={styles.openModalButtonText}>Edit Preferences</Text>
+            </TouchableOpacity>
+          </>
+        )}
         
-
-        <Pressable style={styles.resetButton}>
-          <Text style={styles.resetText}>Breakfast</Text>
-        </Pressable>
-
-        <Pressable style={styles.resetButton}>
-          <Text style={styles.resetText}>Lunch</Text>
-        </Pressable>
-
-        <Pressable style={styles.resetButton}>
-          <Text style={styles.resetText}>Dinner</Text>
-        </Pressable>
-
-        <TouchableOpacity style={styles.openModalButton} onPress={() => openModal('initial')}>
-          <Text style={styles.openModalButtonText}>Edit Preferences</Text>
-        </TouchableOpacity>
-
       </View>
     </SafeAreaView>
   );
@@ -309,9 +406,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#dfe9e4',
   },
-  mainContent: {
-    padding: 20,
-  },
   title: {
     fontSize: 55,
     fontWeight: 'bold',
@@ -321,27 +415,6 @@ const styles = StyleSheet.create({
     marginBottom: -30,
     top: '-8%',
     left: '38%',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  titleText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  button3: {
-    backgroundColor: '#808080',
-    width: 200,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  buttonText3: {
-    fontSize: 30,
-    color: 'white',
-    fontWeight: 'bold',
   },
   openModalButton: {
     backgroundColor: '#4b7863',
@@ -354,7 +427,6 @@ const styles = StyleSheet.create({
     height: 60,
     marginLeft: 'auto',
     marginRight: 'auto',
-
   },
   openModalButtonText: {
     color: 'white',
@@ -483,6 +555,32 @@ const styles = StyleSheet.create({
     marginRight: 'auto',
     marginTop: 25,
     borderRadius: 50,
+  },
+  scrollBox: {
+    flex: 1,
+  },
+  itemContainer: {
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: '#f0f0f0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemText: {
+    fontSize: 18,
+    color: 'black',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: 'gray',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 
