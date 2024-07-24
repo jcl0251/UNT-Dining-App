@@ -11,15 +11,12 @@ from firebase_admin import credentials, firestore
 
 # Function that utilizes BeautifulSoup and Requests to fetch and parse a site
 def scrape(url):
-    #print(f"Fetching URL: {url}")
     response = requests.get(url) # Gets page from url
     content = response.text # Turn into text
     soup = BeautifulSoup(content, 'html.parser') # Parse as html
     return soup
 
-# Function that determines which meal of the day the meals belong to based on the section's html ID 
-# It then puts them into a dictionary to map MEALOFDAY : MEAL
-def find_meal_of_day(url):
+def scrape_for_meal_of_day(url):
     soup = scrape(url)
     
     meals_of_day = { # DICTIONARY. Key-value pair is MEALOFDAY : ID
@@ -27,6 +24,10 @@ def find_meal_of_day(url):
         'Lunch': soup.find(id='lunch'),
         'Dinner': soup.find(id='dinner')
     }
+    return meals_of_day
+
+def find_meal_of_day(url):
+    meals_of_day = scrape_for_meal_of_day(url)
     
     list_groups = {} # Will later map meal type to the meal itself
     
@@ -75,7 +76,6 @@ def find_nutrition(url):
         'Added Sugars Percent': 0
     }
 
-    # List to match labels to their percentage values
     label_order = [
         'Total Fat', 'Saturated Fat', 'Sodium', 'Total Carbohydrates', 
         'Dietary Fiber', 'Added Sugars'
@@ -87,15 +87,9 @@ def find_nutrition(url):
         if percent_text.isdigit():
             percentage_values.append(float(percent_text))
     
-    print("Debug: All percentage divs")
-    for percent in percentage_values:
-        print(percent)
-    
-    # Adjust the index to correctly align percentages
     for i, nutrient_name in enumerate(label_order):
         if i < len(percentage_values):
             nutrient_percentages[f'{nutrient_name} Percent'] = percentage_values[i]
-            print(f"Debug: {nutrient_name} assigned {percentage_values[i]}%")
     
     for label in labels:
         label_text = label.get_text(strip=True)
@@ -106,7 +100,6 @@ def find_nutrition(url):
             if nutrient_name in nutrients:
                 nutrients[nutrient_name] = nutrient_value
         
-        # Handle 'Includes Xg Added Sugars'
         if 'Includes' in label_text:
             match_added_sugars = re.search(r'Includes\s([\d\.]+)g\sAdded\sSugars', label_text)
             if match_added_sugars:
@@ -115,56 +108,52 @@ def find_nutrition(url):
 
     nutrients.update(nutrient_percentages)
     
-    print("Debug: Nutrients with percentages")
-    for nutrient, value in nutrients.items():
-        print(f"{nutrient}: {value}")
-    
     return nutrients
 
 def find_ingredients(url):
-    
     soup = scrape(url)
-    
     ingredient_info = soup.find_all('p', class_='modal-description-text')
     results = [p.get_text(strip=True) for p in ingredient_info]
     return results
 
 def find_serving_size(url):
     soup = scrape(url)
-    
     serving_size_tag = soup.find('span', class_='highlighted')
     if serving_size_tag:
         serving_size = serving_size_tag.get_text(strip=True)
-        is_each = 'each' in serving_size.lower() # This assigns true or false to variable IF 'each' is detected in the serving_size
+        is_each = not 'oz' in serving_size.lower()
         return serving_size, is_each
-    return None, False #If there is no serving size tag or each!? Shouldn't hit but its a failsafe
+    return None, False
 
-def serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each): # Takes all of these and calculates if high/low etc
-    is_high_calorie = calories >= 400 # High calorie is 400+ calories in one serving
-    is_high_protein = protein >= (calories/10) # High protein is 1+ gram protein per 10 calories
-    is_high_fat = total_fat > 17.5 / 3.5 # per oz. Its 100g or 3.5 oz
-    is_high_carbs = total_carbohydrates >= 15 # If >= 15 g, its high carbs.
-    return is_high_calorie, is_high_protein, is_high_fat, is_high_carbs
+def serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each):
+    try:
+        serving_size_value = float(serving_size.split()[0])
+    except (ValueError, IndexError):
+        serving_size_value = 1.0
+    
+    is_high_protein = protein >= (calories/14) # Higher the denominator is, the stricter the cutoff for highprotein classification 
+    is_high_fat = total_fat > 17.5 / 3.5
+    is_high_carbs = total_carbohydrates >= 15
+    
+    if (not is_each):
+        is_low_calorie = (calories / serving_size_value) < 80 
+        is_high_calorie = (calories / serving_size_value) >= 100
+    else:
+        is_low_calorie = calories < 80
+        is_high_calorie = calories >= 130
+
+    return is_high_protein, is_high_fat, is_high_carbs, is_high_calorie, is_low_calorie
     
 
-# Function that removes all html tags and text through RegEx
 def cleanup_list_group(list_group):
     header, ul = list_group
     data_string = str(ul)
     
-    # Define your pattern to match <li> tags
     pattern = r'<li[^>]*id="(\d+)"[^>]*>(.*?)<\/li>'
     
-    # Find all matches using regular expressions
     matches = re.findall(pattern, data_string, re.DOTALL)
     
-    # Create a list of tuples with ID, name, and header
     data = [(match[0], html.unescape(match[1].strip()), header) for match in matches]
-    
-    # Print raw data for debugging
-    #print(f"Raw data for header '{header}':")
-    #for item in data:
-        #print(item)
     
     return data
     
@@ -176,9 +165,9 @@ def link_firebase():
     database = firestore.client()
     return database
 
-def clear_firestore_collection(database, collection): # SO INFO DOESN'T OVERWRITE IN COLLECTIONS OTHER THAN LIBRARY
+def clear_firestore_collection(database, collection):
     collection_reference = database.collection(collection)
-    docs = collection_reference.stream() # From fir
+    docs = collection_reference.stream()
     for doc in docs:
         doc.reference.delete()
 
@@ -194,20 +183,62 @@ def input_to_firestore(database, data, meal_type):
         serving_size, is_each = find_serving_size(dish_nutrition_url)
         allergens = ingredients[0].lower().split(',') if ingredients else []
         
+        
         calories = nutrition['Calories']
         total_fat = nutrition['Total Fat']
         protein = nutrition['Protein']
         total_carbohydrates = nutrition['Total Carbohydrates']
         
-        is_high_calorie, is_high_protein, is_high_fat, is_high_carbs = serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each)
-        is_halal = "pork" not in allergens
-        is_gluten_free = "wheat" not in allergens
-        is_allergen_free = len(allergens) == 0
+        is_high_protein, is_high_fat, is_high_carbs, is_high_calorie, is_low_calorie = serving_based_nutrition(calories, protein, total_fat, total_carbohydrates, serving_size, is_each)
         
+        allergens_lower = set(item.strip().lower() for item in allergens)
+        ingredients_lower = set(item.strip().lower() for item in ingredients)
         
-        document_reference = collection_reference.document(dish_id) #Creates documents (entries) in the collection (mealtype). AKA puts meals in meals of day
+        is_halal = "pork" not in allergens_lower and "pork" not in ingredients_lower and "bacon" not in ingredients_lower
+        is_gluten_free = "wheat" not in allergens_lower and "Wheat" not in allergens_lower
+        is_allergen_free = all(allergen == "" for allergen in allergens)
+        
+        non_vegan_ingredients = [
+            "meat", "pork", "beef", "duck", "shrimp", "crab", "shellfish", "chicken", "fish", "egg", "eggs", "milk", 
+            "cheese", "gelatin", "honey", "butter", "lard", "whey", "casein", "goat", "lamb", "mutton", "venison",
+            "rabbit", "turkey", "bison", "buffalo", "veal", "clams", "oysters", "mussels", "scallops", "octopus", 
+            "squid", "anchovy", "caviar", "cod", "herring", "lobster", "salmon", "sardine", "tilapia", "trout", 
+            "tuna", "yogurt", "cream", "custard", "ghee", "margarine", "mayonnaise", "nougat", "suet", "tallow",
+            "chorizo", "pepperoni", "bacon", "ham", "prosciutto", "sausage", "pâté", "foie gras", "kielbasa",
+            "corned beef", "pastrami", "hot dog", "mortadella", "spam", "soppressata", "salami", "brisket", 
+            "poultry", "wild game", "poultry fat", "beef broth", "chicken broth", "fish broth", "bone broth",
+            "anchovies", "shellac", "isenglass", "carmine", "cochineal", "albumin", "broth", "broth powder",
+            "caseinate", "rennet", "rennin", "meat stock", "meat extract", "meat flavor", "animal fat", 
+            "animal rennet", "animal shortening", "animal stock", "bone char", "calcium caseinate", "caviar",
+            "cheese curds", "cheese powder", "chicken fat", "duck fat", "emu oil", "fish gelatin", "fish oil", 
+            "fish sauce", "fish stock", "gelatin hydrolysate", "goose fat", "ground meat", "hide glue", 
+            "hydrolyzed animal protein", "hydrolyzed collagen", "hydrolyzed gelatin", "hydrolyzed protein", 
+            "hydrolyzed silk", "isinglass", "keratin", "kosher gelatin", "lactose", "lactulose", "lamb fat",
+            "lanolin", "lard oil", "leather", "meat flavoring", "meat meal", "meat stock powder", "milk powder",
+            "milk protein", "mozzarella cheese", "mussels extract", "ox fat", "pepsin", "polypeptides",
+            "protease", "provolone cheese", "pudding mix", "rabbit fat", "ribbon fish", "roe", "salmon oil",
+            "shark cartilage", "shark liver oil", "shellfish extract", "shrimp extract", "sour cream", 
+            "sour milk", "spleen extract", "sweet whey", "tilapia extract", "tripe", "turkey extract",
+            "veal extract", "whey protein", "whey protein isolate", "whitefish", "whole egg powder",
+            "whole milk powder", "wool fat", "wool wax", "yogurt powder", "albumen", "bone meal", 
+            "catfish", "chicken powder", "cod liver oil", "crayfish", "crustaceans", "eel", "grouper", 
+            "halibut", "herring oil", "lake trout", "meat juice", "meat tenderizer", "mollusks", 
+            "monkfish", "omega-3 fatty acids", "pompano", "rockfish", "sablefish", "snapper", 
+            "sole", "swordfish", "yellowtail", "yolk", "zooplankton", "byproducts", "lipase", 
+            "semolina", "tuna oil", "beef tallow", "duck meat", "goat cheese", "turkey meat",
+            "turkey broth", "meat flavorings", "oyster extract", "poultry broth", "fish gelatin",
+            "goat meat", "mutton broth", "sheep milk", "sheep cheese", "clam extract", "crayfish extract"
+        ]
+        
+        allergens_set = set(re.split(r'[\s,]+', ', '.join(allergens_lower)))
+        ingredients_set = set(re.split(r'[\s,]+', ', '.join(ingredients_lower)))
+
+        is_vegan = not any(animal_product in allergens_set or animal_product in ingredients_set for animal_product in non_vegan_ingredients)
+
+        document_reference = collection_reference.document(dish_id)
         document_reference.set({
             'name': dish[1],
+            'mealType': meal_type.lower(),
             'header': dish[2],
             'calories': calories,
             'total_fat': total_fat,
@@ -226,22 +257,25 @@ def input_to_firestore(database, data, meal_type):
             'total_carbohydrates_percent': nutrition.get('Total Carbohydrates Percent', 0),
             'dietary_fiber_percent': nutrition.get('Dietary Fiber Percent', 0),
             'added_sugars_percent': nutrition.get('Added Sugars Percent', 0),
-            'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
+            'allergens': ingredients[0] if len(ingredients) > 0 else '',
             'ingredients': ingredients[1] if len(ingredients) > 1 else '',
             'serving_size': serving_size,
             'is_each': is_each,
             'is_high_calorie': is_high_calorie,
+            'is_low_calorie': is_low_calorie,
             'is_high_protein': is_high_protein,
             'is_high_fat': is_high_fat,
             'is_high_carbs': is_high_carbs,
             'is_halal': is_halal,
             'is_gluten_free': is_gluten_free,
             'is_allergen_free': is_allergen_free,
+            'is_vegan': is_vegan,
         })
         
-        library_document_reference = library_collection_reference.document(dish_id) #Here we are just storying every ID into a library that wont be overwritten so we can essentially use a search bar
+        library_document_reference = library_collection_reference.document(dish_id)
         library_document_reference.set({
             'name': dish[1],
+            'mealType': meal_type.lower(),
             'header': dish[2],
             'calories': calories,
             'total_fat': total_fat,
@@ -260,29 +294,27 @@ def input_to_firestore(database, data, meal_type):
             'total_carbohydrates_percent': nutrition.get('Total Carbohydrates Percent', 0),
             'dietary_fiber_percent': nutrition.get('Dietary Fiber Percent', 0),
             'added_sugars_percent': nutrition.get('Added Sugars Percent', 0),
-            'allergens': ingredients[0] if len(ingredients) > 0 else '', # Chance that there aren't any allergens so this is just in case
+            'allergens': ingredients[0] if len(ingredients) > 0 else '',
             'ingredients': ingredients[1] if len(ingredients) > 1 else '',
             'serving_size': serving_size,
             'is_each': is_each,
             'is_high_calorie': is_high_calorie,
+            'is_low_calorie': is_low_calorie,
             'is_high_protein': is_high_protein,
             'is_high_fat': is_high_fat,
             'is_high_carbs': is_high_carbs,
             'is_halal': is_halal,
             'is_gluten_free': is_gluten_free,
             'is_allergen_free': is_allergen_free,
+            'is_vegan': is_vegan,
         })
-        
-    
+
 if __name__ == "__main__":
     url1 = 'https://diningmenus.unt.edu/?locationID=20'
     
     list_groups = find_meal_of_day(url1)
-    
 
     all_data = {'Breakfast': [], 'Lunch': [], 'Dinner': []}
-    
-    #create_database()
     
     database = link_firebase()
     
